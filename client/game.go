@@ -12,11 +12,11 @@ var (
 
 const (
 	// States of the application
-	sInit        = 0
-	sMenu        = 1
-	sGamePlaying = 2
-	sGameWin     = 3
-	sGameLose    = 4
+	sInit = iota
+	sMenu
+	sGamePlaying
+	sGameWin
+	sGameLose
 )
 
 type Game struct {
