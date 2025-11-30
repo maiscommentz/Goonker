@@ -1,4 +1,4 @@
-package main
+package ui
 
 import (
 	"image"
@@ -87,8 +87,8 @@ func DrawCross(col, row int) image.Image {
 	return dc.Image()
 }
 
-func DrawMenu() image.Image {
-	dc := gg.NewContext(WindowWidth, WindowHeight)
+func DrawMenu(width, height int, title string) image.Image {
+	dc := gg.NewContext(width, height)
 
 	dc.SetHexColor(gridBackgroundColor)
 	dc.Clear()
@@ -100,7 +100,7 @@ func DrawMenu() image.Image {
 
 	// Game title
 	dc.SetHexColor("#2C3E50")
-	dc.DrawStringAnchored(GameTitle, float64(WindowWidth/2), float64(WindowHeight)/5, 0.5, 0.5)
+	dc.DrawStringAnchored(title, float64(width/2), float64(height)/5, 0.5, 0.5)
 
 	return dc.Image()
 }

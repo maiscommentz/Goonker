@@ -1,6 +1,8 @@
 package main
 
 import (
+	"Goonker/client/ui"
+
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -24,8 +26,8 @@ type Game struct {
 
 type Menu struct {
 	menuImage *ebiten.Image
-	btnPlay   *Button
-	btnQuit   *Button
+	btnPlay   *ui.Button
+	btnQuit   *ui.Button
 }
 
 /**
@@ -54,13 +56,13 @@ func (g *Game) Update() error {
 func (g *Game) Draw(screen *ebiten.Image) {
 	switch g.state {
 	case sMenu:
-		RenderMenu(screen, g.menu)
+		ui.RenderMenu(screen, g.menu.menuImage, g.menu.btnPlay, g.menu.btnQuit)
 	case sGamePlaying:
-		RenderGame(screen, g)
+		ui.RenderGame(screen, boardImage)
 	case sGameWin:
-		RenderGame(screen, g)
+		ui.RenderGame(screen, boardImage)
 	case sGameLose:
-		RenderGame(screen, g)
+		ui.RenderGame(screen, boardImage)
 	}
 }
 
@@ -75,16 +77,16 @@ func (g *Game) Init() {
 	buttonWidth, buttonHeight := 200.0, 60.0
 	centerX := (float64(WindowWidth) - buttonWidth) / 2
 
-	g.menu.btnPlay = NewButton(centerX, 200, buttonWidth, buttonHeight, "Play")
-	g.menu.btnQuit = NewButton(centerX, 300, buttonWidth, buttonHeight, "Quit")
+	g.menu.btnPlay = ui.NewButton(centerX, 200, buttonWidth, buttonHeight, "Play")
+	g.menu.btnQuit = ui.NewButton(centerX, 300, buttonWidth, buttonHeight, "Quit")
 
 	if g.menu.menuImage == nil {
-		img := DrawMenu()
+		img := ui.DrawMenu(WindowWidth, WindowHeight, GameTitle)
 		g.menu.menuImage = ebiten.NewImageFromImage(img)
 	}
 
 	if boardImage == nil {
-		grid := DrawGrid()
+		grid := ui.DrawGrid()
 		boardImage = ebiten.NewImageFromImage(grid)
 	}
 
