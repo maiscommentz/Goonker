@@ -33,7 +33,7 @@ func (h *Hub) CreateRoom(roomID string, isBot bool) *Room {
 	return newRoom
 }
 
-// CleanUp supprime les rooms vides (à appeler périodiquement si besoin)
+// RemoveRoom deletes a room from the hub
 func (h *Hub) RemoveRoom(roomID string) {
 	h.mutex.Lock()
 	defer h.mutex.Unlock()

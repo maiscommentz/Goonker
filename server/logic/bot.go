@@ -6,9 +6,9 @@ import (
 	"time"
 )
 
-// SimpleBot choisit un coup aléatoire parmi les cases vides
+// SimpleBot Chooses a random empty cell for its move
 func GetBotMove(logic *GameLogic) (int, int) {
-	// Petit délai pour simuler "la réflexion" et rendre le jeu plus naturel
+	// Small delay to simulate "thinking" and make the game feel more natural
 	time.Sleep(500 * time.Millisecond)
 
 	emptyCells := [][2]int{}

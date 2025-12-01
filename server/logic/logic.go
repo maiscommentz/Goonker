@@ -5,7 +5,7 @@ import (
 	"errors"
 )
 
-// GameLogic gère l'état pur du jeu sans se soucier du réseau
+// GameLogic manages the state of a Tic-Tac-Toe game
 type GameLogic struct {
 	Board [3][3]common.PlayerID
 	Turn  common.PlayerID
@@ -16,11 +16,11 @@ type GameLogic struct {
 
 func NewGameLogic() *GameLogic {
 	return &GameLogic{
-		Turn: common.P1, // X commence toujours
+		Turn: common.P1, // X always starts
 	}
 }
 
-// ApplyMove tente de jouer un coup. Retourne une erreur si invalide.
+// ApplyMove attempts to play a move. Returns an error if invalid.
 func (g *GameLogic) ApplyMove(player common.PlayerID, x, y int) error {
 	if g.GameOver {
 		return errors.New("game is over")
@@ -35,18 +35,18 @@ func (g *GameLogic) ApplyMove(player common.PlayerID, x, y int) error {
 		return errors.New("cell already occupied")
 	}
 
-	// Appliquer le coup
+	// Apply the move
 	g.Board[x][y] = player
 	g.Moves++
 
-	// Vérifier la victoire ou match nul
+	// Check for win or draw
 	if g.checkWin(player) {
 		g.Winner = player
 		g.GameOver = true
 	} else if g.Moves >= 9 {
-		g.GameOver = true // Match nul
+		g.GameOver = true // Draw
 	} else {
-		// Changer le tour
+		// Change turn
 		if g.Turn == common.P1 {
 			g.Turn = common.P2
 		} else {
@@ -59,12 +59,12 @@ func (g *GameLogic) ApplyMove(player common.PlayerID, x, y int) error {
 
 func (g *GameLogic) checkWin(p common.PlayerID) bool {
 	b := g.Board
-	// Lignes et Colonnes
+	// Rows and Columns
 	for i := 0; i < 3; i++ {
 		if b[i][0] == p && b[i][1] == p && b[i][2] == p { return true }
 		if b[0][i] == p && b[1][i] == p && b[2][i] == p { return true }
 	}
-	// Diagonales
+	// Diagonals
 	if b[0][0] == p && b[1][1] == p && b[2][2] == p { return true }
 	if b[0][2] == p && b[1][1] == p && b[2][0] == p { return true }
 	
