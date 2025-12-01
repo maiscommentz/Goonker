@@ -30,6 +30,14 @@ func NewNetworkClient() *NetworkClient {
 
 // Connect dials the server (ws://localhost:8080/ws for local dev)
 func (c *NetworkClient) Connect(url string) error {
+	// Thread-safe check if already connected
+	c.sendMu.Lock()
+	if c.conn != nil {
+		c.sendMu.Unlock()
+		log.Println("Already connected to server")
+		return nil
+	}
+	c.sendMu.Unlock()
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
@@ -38,8 +46,11 @@ func (c *NetworkClient) Connect(url string) error {
 		return err
 	}
 
+	//Assign the connection safely
+	c.sendMu.Lock()
 	c.conn = conn
 	c.ctx, c.ctxCancel = context.WithCancel(context.Background())
+	c.sendMu.Unlock()
 
 	// Start listening immediately in a separate goroutine
 	go c.listen()
@@ -50,15 +61,29 @@ func (c *NetworkClient) Connect(url string) error {
 
 func (c *NetworkClient) listen() {
 	defer func() {
-		c.conn.Close(websocket.StatusInternalError, "connection closed")
-		c.ctxCancel()
+		// Lock, Close, and set c.conn to nil so we can reconnect later
+		c.sendMu.Lock()
+		if c.conn != nil {
+			c.conn.Close(websocket.StatusInternalError, "connection closed")
+			c.conn = nil // Important: Reset so Connect() works again
+		}
+		c.sendMu.Unlock()
+		
+		if c.ctxCancel != nil {
+			c.ctxCancel()
+		}
 	}()
 
 	for {
 		var packet common.Packet
-		// Reads JSON from socket and unmarshals into Packet struct
+		
+		// Use the client context for reading
 		err := wsjson.Read(c.ctx, c.conn, &packet)
 		if err != nil {
+			// If context was canceled or connection closed, just return
+			if c.ctx.Err() != nil {
+				return
+			}
 			log.Printf("Read error: %v", err)
 			return
 		}
@@ -103,6 +128,7 @@ func (c *NetworkClient) SendPacket(packet common.Packet) error {
 	defer c.sendMu.Unlock()
 
 	if c.conn == nil {
+		log.Println("Not connected to server")
 		return nil 
 	}
 
