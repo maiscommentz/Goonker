@@ -97,32 +97,7 @@ func (c *NetworkClient) listen() {
 	}
 }
 
-// Send wraps the data in the Packet struct and sends it
-func (c *NetworkClient) Send(msgType string, payload interface{}) error {
-	c.sendMu.Lock()
-	defer c.sendMu.Unlock()
-
-	if c.conn == nil {
-		return nil
-	}
-
-	// Wrap payload in Packet envelope
-	// Note: wsjson.Write will automatically marshal 'payload' into the 'Data' field
-	// if we structured the write correctly, but here we construct the full packet manually
-	// to ensure it matches the common.Packet definition.
-	
-	// However, wsjson.Write takes an interface{}.
-	// We need to construct the common.Packet with the RawMessage.
-	// For simplicity in this helper, we rely on the struct logic in game.go 
-	// or we just send the raw struct if the library supports it.
-	
-	// BETTER APPROACH for this helper:
-	// Just accept the full packet.
-	
-	return nil
-}
-
-// SendPacket is the raw sender
+// SendPacket sends a packet to the server
 func (c *NetworkClient) SendPacket(packet common.Packet) error {
 	c.sendMu.Lock()
 	defer c.sendMu.Unlock()

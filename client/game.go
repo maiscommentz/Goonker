@@ -17,6 +17,7 @@ const (
 	// States of the application
 	sInit = iota
 	sMenu
+	sPlayMenu
 	sGamePlaying
 	sGameWin
 	sGameLose
@@ -24,6 +25,7 @@ const (
 
 type Game struct {
 	menu      *Menu
+	playMenu  *PlayMenu
 	state     int
 	netClient *NetworkClient
 
@@ -36,6 +38,10 @@ type Menu struct {
 	menuImage *ebiten.Image
 	btnPlay   *ui.Button
 	btnQuit   *ui.Button
+}
+
+type PlayMenu struct {
+	// TODO: Add fields for play menu (e.g., room selection, bot option)
 }
 
 /**
@@ -86,6 +92,7 @@ func (g *Game) Update() error {
 		g.Init()
 	case sMenu:
 		if g.menu.btnPlay.IsClicked() {
+			// TODO: This block will be placed in PlayMenu later
 			// Try to connect to server (Async)
 			// Note: For WASM/Localhost testing use ws://localhost:8080/ws?room=87DY68
 			go func() {
@@ -94,10 +101,13 @@ func (g *Game) Update() error {
 					log.Println("Connection failed:", err)
 				}
 			}()
+			// TODO: g.state = sPlayMenu
 		}
 		if g.menu.btnQuit.IsClicked() {
 			return ebiten.Termination
 		}
+	case sPlayMenu:
+		//TODO: Handle Play Menu interactions
 	case sGamePlaying:
 		if g.isMyTurn && ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
 			// Still TODO: Handle click on board
@@ -114,6 +124,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	switch g.state {
 	case sMenu:
 		ui.RenderMenu(screen, g.menu.menuImage, g.menu.btnPlay, g.menu.btnQuit)
+	case sPlayMenu:
+		//TODO: ui.RenderPlayMenu(...)
 	case sGamePlaying:
 		ui.RenderGame(screen, boardImage)
 	case sGameWin:

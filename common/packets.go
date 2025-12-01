@@ -12,9 +12,10 @@ const (
 
 // Message Types
 const (
-	MsgGameStart = "game_start" // Server -> Client: "Match found, you are X"
-	MsgClick     = "click"      // Client -> Server: "I clicked cell 4"
-	MsgUpdate    = "update"     // Server -> Client: "New board state"
+	MsgJoin       = "join"       // Client -> Server: "I want to join room X"
+	MsgGameStart  = "game_start" // Server -> Client: "Match found, you are X"
+	MsgClick      = "click"      // Client -> Server: "I clicked cell 4"
+	MsgUpdate     = "update"     // Server -> Client: "New board state"
 )
 
 // Packet is the generic container sent over the network
@@ -39,4 +40,9 @@ type ClickPayload struct {
 type UpdatePayload struct {
 	Board [3][3]PlayerID `json:"board"`
 	Turn  PlayerID       `json:"turn"` // Whose turn is it?
+}
+// JoinPayload
+type JoinPayload struct {
+    RoomID   string `json:"room_id"`
+    IsBot    bool   `json:"is_bot"`
 }
