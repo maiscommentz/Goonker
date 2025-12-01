@@ -3,6 +3,7 @@ package ui
 import (
 	"github.com/fogleman/gg"
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 )
 
 type Button struct {
@@ -39,7 +40,7 @@ func (b *Button) Draw(screen *ebiten.Image) {
 }
 
 func (b *Button) IsClicked() bool {
-	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 		mx, my := ebiten.CursorPosition()
 		fmx, fmy := float64(mx), float64(my)
 

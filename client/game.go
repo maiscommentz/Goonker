@@ -45,15 +45,6 @@ func (g *Game) Init() {
 	// Initialize network client
 	g.netClient = NewNetworkClient()
 
-	// Try to connect to server (Async)
-	// Note: For WASM/Localhost testing use ws://localhost:8080/ws
-	go func() {
-		err := g.netClient.Connect("ws://localhost:8080/ws")
-		if err != nil {
-			log.Println("Connection failed:", err)
-		}
-	}()
-
 	// Initialize menu
 	g.menu = &Menu{}
 
@@ -95,11 +86,14 @@ func (g *Game) Update() error {
 		g.Init()
 	case sMenu:
 		if g.menu.btnPlay.IsClicked() {
-			// Ask server to join a game
-			log.Println("Sending Join Request...")
-			g.netClient.SendPacket(common.Packet{
-				Type: common.MsgJoin,
-			})
+			// Try to connect to server (Async)
+			// Note: For WASM/Localhost testing use ws://localhost:8080/ws?room=87DY68
+			go func() {
+				err := g.netClient.Connect("ws://localhost:8080/ws?room=87DY68")
+				if err != nil {
+					log.Println("Connection failed:", err)
+				}
+			}()
 		}
 		if g.menu.btnQuit.IsClicked() {
 			return ebiten.Termination
@@ -141,6 +135,10 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
  * Handles incoming network messages.
  */
 func (g *Game) handleNetwork() {
+	if g.netClient == nil {
+        return
+    }
+	
 	for {
 		packet := g.netClient.Poll()
 		if packet == nil {

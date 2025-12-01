@@ -12,7 +12,6 @@ const (
 
 // Message Types
 const (
-	MsgJoin      = "join"       // Client -> Server: "I want to play"
 	MsgGameStart = "game_start" // Server -> Client: "Match found, you are X"
 	MsgClick     = "click"      // Client -> Server: "I clicked cell 4"
 	MsgUpdate    = "update"     // Server -> Client: "New board state"
