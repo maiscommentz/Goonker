@@ -37,5 +37,7 @@ func (h *Hub) CreateRoom(roomID string, isBot bool) *Room {
 func (h *Hub) RemoveRoom(roomID string) {
 	h.mutex.Lock()
 	defer h.mutex.Unlock()
-	delete(h.rooms, roomID)
+	if _, exists := h.rooms[roomID]; exists {
+		delete(h.rooms, roomID)
+	}
 }

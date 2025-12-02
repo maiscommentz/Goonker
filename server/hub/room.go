@@ -87,8 +87,17 @@ func (r *Room) listenPlayer(pid common.PlayerID, conn *websocket.Conn) {
 		// Cleanup on disconnection
 		r.mutex.Lock()
 		delete(r.Players, pid)
+		remainingPlayers := len(r.Players)
 		r.mutex.Unlock()
-		conn.Close(websocket.StatusNormalClosure, "")
+
+		conn.Close(websocket.StatusNormalClosure, "Goodbye")
+
+		if remainingPlayers == 0 {
+			GlobalHub.RemoveRoom(r.ID)
+			log.Printf("Room %s: All players disconnected, room removed", r.ID)
+		} else {
+			log.Printf("Room %s: Player %d disconnected, waiting for new player", r.ID, pid)
+		}
 	}()
 
 	for {

@@ -1,5 +1,5 @@
 # TODO
-[ ] Implement room cleanup in Hub to remove empty rooms.
+[x] Implement room cleanup in Hub when all players disconnect.
 [x] Develop sGamePlaying state in client game for actual gameplay.
 [ ] Develop sPlayMenu state in client game for room selection and connection.
 [x] Test WebSocket connections with multiple clients in deployed environment.
