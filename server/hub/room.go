@@ -46,6 +46,8 @@ func (r *Room) AddPlayer(conn *websocket.Conn) common.PlayerID {
 	var pid common.PlayerID
 	if _, ok := r.Players[common.P1]; !ok {
 		pid = common.P1
+	} else if r.IsBotGame {
+		return common.Empty // Bot game already has player 1
 	} else if _, ok := r.Players[common.P2]; !ok {
 		pid = common.P2
 	} else {
