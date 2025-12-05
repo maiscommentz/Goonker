@@ -14,11 +14,21 @@ import (
 	"nhooyr.io/websocket/wsjson"
 )
 
+// Hub configuration constants
+const (
+	WriteTimeout = 5 * time.Second
+	CloseMessage = "Goodbye"
+	MaxPlayers = 2
+	MaxPlayersWithBot = 1
+)
+
+// Player represents a connected player in the room
 type Player struct {
 	Conn *websocket.Conn
 	ID   common.PlayerID
 }
 
+// Room represents a game room with players and game logic
 type Room struct {
 	ID        string
 	Players   map[common.PlayerID]*Player
@@ -28,6 +38,7 @@ type Room struct {
 	IsBotGame bool
 }
 
+// NewRoom creates a new Room instance.
 func NewRoom(id string, isBot bool) *Room {
 	return &Room{
 		ID:        id,
@@ -37,7 +48,7 @@ func NewRoom(id string, isBot bool) *Room {
 	}
 }
 
-// AddPlayer add a new player to the room and starts listening to their messages
+// AddPlayer assigns an ID (P1/P2) to the connecting player and starts listening.
 func (r *Room) AddPlayer(conn *websocket.Conn) common.PlayerID {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
@@ -56,10 +67,10 @@ func (r *Room) AddPlayer(conn *websocket.Conn) common.PlayerID {
 
 	r.Players[pid] = &Player{Conn: conn, ID: pid}
 	
-	// Launch listener in a separate goroutine
+	// Start listening to this client on a separate goroutine
 	go r.listenPlayer(pid, conn)
 
-	// If the room is full or if it's a bot game, start
+	// Check if the game is ready to start
 	if r.IsFull() {
 		go r.startGame()
 	}
@@ -67,30 +78,36 @@ func (r *Room) AddPlayer(conn *websocket.Conn) common.PlayerID {
 	return pid
 }
 
+// IsFull checks if the room has enough players to start the game.
+// In Bot games, only 1 player is needed, otherwise 2 players are required.
 func (r *Room) IsFull() bool {
 	if r.IsBotGame {
-		return len(r.Players) >= 1
+		return len(r.Players) >= MaxPlayersWithBot
 	}
-	return len(r.Players) == 2
+	return len(r.Players) == MaxPlayers
 }
 
+// startGame initializes the game and notifies players.
 func (r *Room) startGame() {
 	log.Printf("Room %s: Starting game", r.ID)
 	r.broadcastGameStart()
 	r.broadcastUpdate()
 }
 
-// listenPlayer listens to incoming messages from a specific client
+// listenPlayer listens to incoming messages from a specific client.
+// It manages the connection lifecycle and handles disconnections.
 func (r *Room) listenPlayer(pid common.PlayerID, conn *websocket.Conn) {
 	ctx := context.Background()
+
+	// Cleanup triggers on function exit (connection closed or error)
 	defer func() {
-		// Cleanup on disconnection
 		r.mutex.Lock()
 		delete(r.Players, pid)
 		r.mutex.Unlock()
 
-		conn.Close(websocket.StatusNormalClosure, "Goodbye")
+		conn.Close(websocket.StatusNormalClosure, CloseMessage)
 
+		// Auto-remove room if empty
 		if len(r.Players) == 0 {
 			GlobalHub.RemoveRoom(r.ID)
 			log.Printf("Room %s: All players disconnected, room removed", r.ID)
@@ -99,14 +116,15 @@ func (r *Room) listenPlayer(pid common.PlayerID, conn *websocket.Conn) {
 		}
 	}()
 
+	// Listen for incoming messages
 	for {
 		var packet common.Packet
 		err := wsjson.Read(ctx, conn, &packet)
 		if err != nil {
-			log.Printf("Room %s: Player %d disconnected", r.ID, pid)
 			return
 		}
 
+		// Handle Click messages
 		if packet.Type == common.MsgClick {
 			var payload common.ClickPayload
 			if err := json.Unmarshal(packet.Data, &payload); err == nil {
@@ -116,6 +134,7 @@ func (r *Room) listenPlayer(pid common.PlayerID, conn *websocket.Conn) {
 	}
 }
 
+// handleMove coordinates game logic updates and notifications.
 func (r *Room) handleMove(pid common.PlayerID, x, y int) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
@@ -127,30 +146,32 @@ func (r *Room) handleMove(pid common.PlayerID, x, y int) {
 		return
 	}
 
-	// Send the update to everyone
+	// Send the updated board state to all players
 	r.broadcastUpdate_Locked()
 
-	// If the game is over, broadcast the result
+	// Check if game is over, broadcast the result
 	if r.Logic.GameOver {
 		r.broadcastGameOver()
 		return
 	}
 
-	// If it's a Bot Game and the game is not over, the bot plays
+	// If it's a Bot Game and the game is not over, the bot plays.
+	// Launch the bot in a goroutine to avoid blocking the mutex for too long.
 	if r.IsBotGame && !r.Logic.GameOver && r.Logic.Turn == common.P2 {
 		go func() {
-			// Launch the bot in a goroutine to avoid blocking the mutex for too long
-			bx, by := logic.GetBotMove(r.Logic)
-			if bx != -1 {
-				// Call handleMove for the bot
-				// Note: handleMove takes a Lock, so we must call it outside the current lock.
-				// That's why we're in a `go func` here.
-				r.handleMove(common.P2, bx, by)
+			// pass a snapshot of the board to GetBotMove to avoid race conditions
+			botX, botY := logic.GetBotMove(r.Logic)
+			if botX != logic.InvalidCoord {
+				// Valid move returned
+				r.handleMove(common.P2, botX, botY)
 			}
 		}()
 	}
 }
 
+// Broadcasting helper functions
+
+// broadcastGameStart notifies all players that the game is starting.
 func (r *Room) broadcastGameStart() {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
@@ -158,21 +179,19 @@ func (r *Room) broadcastGameStart() {
 	for pid, p := range r.Players {
 		payload := common.GameStartPayload{
 			YouAre: pid,
-			OpponentID: "unknown",
 		}
-		data, _ := json.Marshal(payload)
-		packet := common.Packet{Type: common.MsgGameStart, Data: data}
-		
-		go wsjson.Write(context.Background(), p.Conn, packet)
+		r.sendJson(p.Conn, common.MsgGameStart, payload)
 	}
 }
 
+// broadcastUpdate sends the current game state to all players.
 func (r *Room) broadcastUpdate() {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 	r.broadcastUpdate_Locked()
 }
 
+// broadcastUpdate_Locked sends the current game state to all players.
 func (r *Room) broadcastUpdate_Locked() {
 	log.Printf("Room %s: Broadcasting update", r.ID)
 	r.Logic.PrintConsoleBoard()
@@ -180,28 +199,32 @@ func (r *Room) broadcastUpdate_Locked() {
 		Board: r.Logic.Board,
 		Turn:  r.Logic.Turn,
 	}
-	data, _ := json.Marshal(payload)
-	packet := common.Packet{Type: common.MsgUpdate, Data: data}
 
 	for _, p := range r.Players {
-		// Timeout of 5 seconds for sending
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		wsjson.Write(ctx, p.Conn, packet)
-		cancel()
+		r.sendJson(p.Conn, common.MsgUpdate, payload)
 	}
 }
 
+// broadcastGameOver notifies all players that the game has ended.
 func (r *Room) broadcastGameOver() {
 	log.Printf("Room %s: Broadcasting game over", r.ID)
 	payload := common.GameOverPayload{
 		Winner: r.Logic.Winner,
 	}
-	data, _ := json.Marshal(payload)
-	packet := common.Packet{Type: common.MsgGameOver, Data: data}
+
 	for _, p := range r.Players {
-		// Timeout of 5 seconds for sending
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		wsjson.Write(ctx, p.Conn, packet)
-		cancel()
+		r.sendJson(p.Conn, common.MsgGameOver, payload)
 	}
+}
+
+// sendJson helps to reduce boilerplate and enforce timeouts
+func (r *Room) sendJson(c *websocket.Conn, msgType string, payload interface{}) {
+	data, _ := json.Marshal(payload)
+	packet := common.Packet{Type: msgType, Data: data}
+
+	ctx, cancel := context.WithTimeout(context.Background(), WriteTimeout)
+	defer cancel()
+
+	// Errors are ignored here, they will be handled in listenPlayer
+	wsjson.Write(ctx, c, packet)
 }

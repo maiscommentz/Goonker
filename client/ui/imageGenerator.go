@@ -4,6 +4,7 @@ import (
 	"image/color"
 	"log"
 	"math"
+	"Goonker/common"
 
 	"github.com/fogleman/gg"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -14,7 +15,7 @@ const (
 	lineWidth           = 12.0
 	gridBackgroundColor = "#F4F6F7"
 	gridBorderColor     = "#2C3E50"
-	cellSize            = (gridSize / 3)
+	cellSize            = (gridSize / common.BoardSize)
 	symbolLength        = cellSize/2 - 2*lineWidth
 
 	// Wheel

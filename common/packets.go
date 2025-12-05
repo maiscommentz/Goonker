@@ -2,15 +2,22 @@ package common
 
 import "encoding/json"
 
+// Represents a player in the game
 type PlayerID int
 
+// PlayerID constants
 const (
 	Empty PlayerID = 0
 	P1    PlayerID = 1 // X
 	P2    PlayerID = 2 // O
 )
 
-// Message Types
+// Game constants
+const (
+	BoardSize = 3
+)
+
+// Message types
 const (
 	MsgJoin       = "join"       // Client -> Server: "I want to join room X"
 	MsgGameStart  = "game_start" // Server -> Client: "Match found, you are X"
@@ -19,37 +26,36 @@ const (
 	MsgGameOver   = "game_over"  // Server -> Client: "Game over, result is X"
 )
 
-// Packet is the generic container sent over the network
+// Packet is the generic message structure for communication.
 type Packet struct {
 	Type string          `json:"type"`
-	Data json.RawMessage `json:"data,omitempty"` // The payload specific to the Type
+	Data json.RawMessage `json:"data,omitempty"`
 }
 
-// GameStartPayload: Sent by server when match starts
+// GameStartPayload is sent by server to notify game start.
 type GameStartPayload struct {
-	YouAre     PlayerID `json:"you_are"`     // 1 or 2
-	OpponentID string   `json:"opponent_id"` // For future use
+	YouAre     PlayerID `json:"you_are"` // 1 or 2
 }
 
-// ClickPayload: Sent by client when clicking the board
+// ClickPayload is sent by client with (x,y) of clicked cell.
 type ClickPayload struct {
 	X int `json:"x"`
 	Y int `json:"y"`
 }
 
-// UpdatePayload: Sent by server to sync the board
+// UpdatePayload is sent by server to sync the board.
 type UpdatePayload struct {
-	Board [3][3]PlayerID `json:"board"`
+	Board [BoardSize][BoardSize]PlayerID `json:"board"`
 	Turn  PlayerID       `json:"turn"` // Whose turn is it?
 }
 
-// JoinPayload: Sent by client to join a room
+// JoinPayload is sent by client to join a room.
 type JoinPayload struct {
     RoomID   string `json:"room_id"`
-    IsBot    bool   `json:"is_bot"`
+    IsBot    bool   `json:"is_bot"` // Whether to play against a bot
 }
 
-// GameOverPayload: Sent by server when game ends
+// GameOverPayload is sent by server when game ends.
 type GameOverPayload struct {
 	Winner PlayerID `json:"winner"` // Who won? 0 for draw, 1 or 2 for players
 }

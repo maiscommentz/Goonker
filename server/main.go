@@ -14,72 +14,87 @@ import (
 	"nhooyr.io/websocket/wsjson"
 )
 
-func main() {
-	http.HandleFunc("/ws", wsHandler)
+// Server configuration constants
+const (
+	// Network configuration
+	ServerPort = ":8080"
+	WsRoute       = "/ws"
+	HandshakeTimeout = 5 * time.Second
 
-	log.Println("Server started on :8080")
-	if err := http.ListenAndServe(":8080", nil); err != nil {
+	// Closure Reasons
+	ErrExpectedJoin    = "Expected Join Packet"
+	ErrFirstMustBeJoin = "First message must be 'join'"
+	ErrInvalidPayload  = "Invalid Payload"
+	ErrRoomIDRequired  = "Room ID required"
+	ErrRoomFull        = "Room is full"
+)
+
+// main is the entry point of the server application.
+func main() {
+	// Register the WebSocket handler
+	http.HandleFunc(WsRoute, wsHandler)
+
+	// Start the server
+	log.Printf("Starting server on port %s...", ServerPort)
+	if err := http.ListenAndServe(ServerPort, nil); err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
 }
 
+// wsHandler handles the initial HTTP upgrade and the application-layer handshake.
+// Once the player is validated, control is passed to the Hub/Room.
 func wsHandler(w http.ResponseWriter, r *http.Request) {
-	// Upgrade HTTP connection to WebSocket
+	// Upgrade HTTP to WebSocket (skip verify for local dev)
 	c, err := websocket.Accept(w, r, &websocket.AcceptOptions{
-		InsecureSkipVerify: true, // Only for local testing
+		InsecureSkipVerify: true,
 	})
 	if err != nil {
 		log.Printf("Error upgrading websocket: %v", err)
 		return
 	}
 
-	// Handshake: Wait for the "join" message
-	// We give ourselves a timeout of 5 seconds to receive the join, otherwise we cut off.
-	ctx, cancel := context.WithTimeout(r.Context(), time.Second*5)
+	// Enforce timeout for handshake phase
+	ctx, cancel := context.WithTimeout(r.Context(), HandshakeTimeout)
 	defer cancel()
 
+	// Read the first packet sent by the client
 	var packet common.Packet
 	if err := wsjson.Read(ctx, c, &packet); err != nil {
 		log.Printf("Connection closed before join: %v", err)
-		c.Close(websocket.StatusPolicyViolation, "Expected Join Packet")
+		c.Close(websocket.StatusPolicyViolation, ErrExpectedJoin)
 		return
 	}
 
-	// Validation of message type
+	// Validate that the first packet is a Join request
 	if packet.Type != common.MsgJoin {
 		log.Printf("First packet was not join: %s", packet.Type)
-		c.Close(websocket.StatusPolicyViolation, "First message must be 'join'")
+		c.Close(websocket.StatusPolicyViolation, ErrFirstMustBeJoin)
 		return
 	}
 
-	// Parsing of Payload
+	// Parse the Join payload
 	var joinData common.JoinPayload
 	if err := json.Unmarshal(packet.Data, &joinData); err != nil {
 		log.Printf("Invalid join payload: %v", err)
-		c.Close(websocket.StatusProtocolError, "Invalid Payload")
+		c.Close(websocket.StatusProtocolError, ErrInvalidPayload)
 		return
 	}
 
+	// Validate RoomID presence
 	if joinData.RoomID == "" {
-		c.Close(websocket.StatusPolicyViolation, "Room ID required")
+		c.Close(websocket.StatusPolicyViolation, ErrRoomIDRequired)
 		return
 	}
 
-	// Creation / Retrieval of the Room via the Hub
-	// Note: The Hub manages synchronization, no need for a mutex here.
+	// Let the Hub assign the player to a new or existing room
 	room := hub.GlobalHub.CreateRoom(joinData.RoomID, joinData.IsBot)
-
 	log.Printf("Client joining room '%s' (Bot: %v)", joinData.RoomID, joinData.IsBot)
-
-	// Add the player to the Room
-	// From this point, the Room manages the connection (read loop)
-	// We cancel the handshake timeout context because the connection is now long-lived
 	pid := room.AddPlayer(c)
 
+	// Validation of assigned PlayerID, otherwise room is full
 	if pid == common.Empty {
 		log.Println("Room is full, rejecting client")
-		// On ferme proprement si la salle est pleine
-		c.Close(websocket.StatusPolicyViolation, "Room is full")
+		c.Close(websocket.StatusPolicyViolation, ErrRoomFull)
 	} else {
 		log.Printf("Player assigned ID: %d in room %s", pid, joinData.RoomID)
 	}

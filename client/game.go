@@ -24,7 +24,7 @@ const (
 	// Network configuration
 	serverAddress = "ws://localhost:8080/ws" // goonker.saikoon.ch
 	roomId        = "87DY68"
-	isBotGame     = false
+	isBotGame     = true
 )
 
 type Game struct {

@@ -6,26 +6,35 @@ import (
 	"time"
 )
 
-// SimpleBot Chooses a random empty cell for its move
+// Constants for bot behavior
+const (
+	BotThinkDelay = 500 * time.Millisecond
+	InvalidCoord = -1
+)
+
+// GetBotMove scans the board for available moves and selects one at random.
 func GetBotMove(logic *GameLogic) (int, int) {
-	// Small delay to simulate "thinking" and make the game feel more natural
-	time.Sleep(500 * time.Millisecond)
+	// Simulate "thinking" time for natural gameplay flow
+	time.Sleep(BotThinkDelay)
 
-	emptyCells := [][2]int{}
+	// Identify all available moves
+	var availableMoves [][2]int
 
-	for x := 0; x < 3; x++ {
-		for y := 0; y < 3; y++ {
+	for x := 0; x < common.BoardSize; x++ {
+		for y := 0; y < common.BoardSize; y++ {
 			if logic.Board[x][y] == common.Empty {
-				emptyCells = append(emptyCells, [2]int{x, y})
+				availableMoves = append(availableMoves, [2]int{x, y})
 			}
 		}
 	}
 
-	if len(emptyCells) == 0 {
-		return -1, -1
+	// If no moves are available, return invalid coordinates (Draw)
+	if len(availableMoves) == 0 {
+		return InvalidCoord, InvalidCoord
 	}
 
+	// Randomly select one of the available moves
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	choice := emptyCells[r.Intn(len(emptyCells))]
+	choice := availableMoves[r.Intn(len(availableMoves))]
 	return choice[0], choice[1]
 }
