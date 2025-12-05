@@ -5,6 +5,7 @@ import (
 	"Goonker/common"
 	"encoding/json"
 	"log"
+	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
 )
@@ -12,19 +13,21 @@ import (
 const (
 	// States of the application
 	sInit = iota
-	sMenu
-	sPlayMenu
+	sMainMenu
+	//sPlayMenu
+	sWaitingGame
 	sGamePlaying
 	sGameWin
 	sGameLose
 )
 
 type Game struct {
-	menu      *ui.Menu
-	playMenu  *PlayMenu
-	state     int
-	netClient *NetworkClient
-	grid      *ui.Grid
+	menu        *ui.MainMenu
+	waitingMenu *ui.WaitingMenu
+	playMenu    *PlayMenu
+	state       int
+	netClient   *NetworkClient
+	grid        *ui.Grid
 
 	mySymbol common.PlayerID // 1 for X, 2 for O
 	isMyTurn bool
@@ -41,28 +44,21 @@ func (g *Game) Init() {
 	// Initialize network client
 	g.netClient = NewNetworkClient()
 
-	// Initialize menu
-	g.menu = &ui.Menu{}
+	// Initialize the UI
+	ui.Init()
 
-	// Center buttons
-	buttonWidth, buttonHeight := 200.0, 60.0
-	centerX := (float64(ui.WindowWidth) - buttonWidth) / 2
+	// Initialize the main menu
+	g.menu = ui.NewMainMenu()
 
-	// Create buttons
-	g.menu.BtnPlay = ui.NewButton(centerX, 200, buttonWidth, buttonHeight, "Play")
-	g.menu.BtnQuit = ui.NewButton(centerX, 300, buttonWidth, buttonHeight, "Quit")
-
-	// Pre-render menu image
-	if g.menu.MenuImage == nil {
-		img := ui.DrawMenu(ui.WindowWidth, ui.WindowHeight, ui.GameTitle)
-		g.menu.MenuImage = ebiten.NewImageFromImage(img)
-	}
+	g.waitingMenu = &ui.WaitingMenu{}
 
 	// Initialize the grid
-	g.grid = ui.NewGrid(ui.GridCol, ui.GridCol)
+	g.grid = &ui.Grid{
+		Col: ui.GridCol,
+	}
 
 	// Set initial state
-	g.state = sMenu
+	g.state = sMainMenu
 }
 
 /**
@@ -77,14 +73,16 @@ func (g *Game) Update() error {
 	switch g.state {
 	case sInit:
 		g.Init()
-	case sMenu:
+	case sMainMenu:
 		if g.menu.BtnPlay.IsClicked() {
 			// TODO: This block will be placed in PlayMenu later
 			// Try to connect to server (Async)
 			// Note: For WASM/Localhost testing use ws://localhost:8080/ws?room=87DY68
 			go func() {
+				g.state = sWaitingGame
 				err := g.netClient.Connect("ws://localhost:8080/ws", "87DY68", false) // 172.20.10.2
 				if err != nil {
+					g.state = sMainMenu
 					log.Println("Connection failed:", err)
 				}
 			}()
@@ -93,8 +91,14 @@ func (g *Game) Update() error {
 		if g.menu.BtnQuit.IsClicked() {
 			return ebiten.Termination
 		}
-	case sPlayMenu:
-		//TODO: Handle Play Menu interactions
+	case sWaitingGame:
+		g.waitingMenu.RotationAngle += 0.08
+
+		if g.waitingMenu.RotationAngle > math.Pi*2 {
+			g.waitingMenu.RotationAngle -= math.Pi * 2
+		}
+	//case sPlayMenu:
+	//TODO: Handle Play Menu interactions
 	case sGamePlaying:
 		if !g.isMyTurn {
 			return nil
@@ -128,10 +132,12 @@ func (g *Game) Update() error {
  */
 func (g *Game) Draw(screen *ebiten.Image) {
 	switch g.state {
-	case sMenu:
+	case sMainMenu:
 		ui.RenderMenu(screen, g.menu)
-	case sPlayMenu:
-		//TODO: ui.RenderPlayMenu(...)
+	case sWaitingGame:
+		ui.RenderWaitingGame(screen, g.waitingMenu)
+	//case sPlayMenu:
+	//TODO: ui.RenderPlayMenu(...)
 	case sGamePlaying:
 		ui.RenderGame(screen, g.grid, g.isMyTurn)
 	case sGameWin:

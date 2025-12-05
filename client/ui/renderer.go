@@ -2,8 +2,13 @@ package ui
 
 import (
 	"Goonker/common"
+	"bytes"
+	"image/color"
+	"log"
+	"os"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/text/v2"
 )
 
 const (
@@ -13,23 +18,56 @@ const (
 	GridCol      = 3
 )
 
-func RenderMenu(screen *ebiten.Image, menu *Menu) {
-	screen.DrawImage(menu.MenuImage, nil)
+var (
+	gameFaceSource *text.GoTextFaceSource
+	GameFont       *text.GoTextFace
+)
+
+func Init() {
+	InitImages()
+
+	fontData, err := os.ReadFile("client/assets/font.ttf")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	src, err := text.NewGoTextFaceSource(bytes.NewReader(fontData))
+	if err != nil {
+		log.Fatal(err)
+	}
+	gameFaceSource = src
+
+	GameFont = &text.GoTextFace{
+		Source: gameFaceSource,
+		Size:   12,
+	}
+}
+
+func RenderMenu(screen *ebiten.Image, menu *MainMenu) {
+	screen.DrawImage(MainMenuImage, nil)
 	menu.Draw(screen)
 	menu.BtnPlay.Draw(screen)
 	menu.BtnQuit.Draw(screen)
 }
 
+func RenderWaitingGame(screen *ebiten.Image, waitingMenu *WaitingMenu) {
+	waitingMenu.Draw(screen)
+}
+
 func RenderGame(screen *ebiten.Image, grid *Grid, myTurn bool) {
+	screen.DrawImage(GameMenuImage, nil)
+
 	screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()
-	gridWidth, gridHeight := grid.BoardImage.Bounds().Dx(), grid.BoardImage.Bounds().Dy()
+	gridWidth, gridHeight := GridImage.Bounds().Dx(), GridImage.Bounds().Dy()
 
 	offsetX := float64(screenWidth-gridWidth) / 2
 	offsetY := float64(screenHeight-gridHeight) / 2
 
+	cellSize := float64(gridWidth) / float64(grid.Col)
+
 	op := &ebiten.DrawImageOptions{}
 	op.GeoM.Translate(offsetX, offsetY)
-	screen.DrawImage(grid.BoardImage, op)
+	screen.DrawImage(GridImage, op)
 
 	for x := 0; x < grid.Col; x++ {
 		for y := 0; y < grid.Col; y++ {
@@ -37,16 +75,38 @@ func RenderGame(screen *ebiten.Image, grid *Grid, myTurn bool) {
 
 			switch grid.BoardData[x][y] {
 			case common.P1:
-				img = ebiten.NewImageFromImage(DrawCross(x, y))
+				img = CrossImage
 			case common.P2:
-				img = ebiten.NewImageFromImage(DrawCircle(x, y))
+				img = CircleImage
 			}
 
 			if img != nil {
 				opSym := &ebiten.DrawImageOptions{}
+				cellX := (float64(x) - 1) * cellSize
+				cellY := (float64(y) - 1) * cellSize
+
+				opSym.GeoM.Translate(cellX, cellY)
 				opSym.GeoM.Translate(offsetX, offsetY)
+
 				screen.DrawImage(img, opSym)
 			}
 		}
+	}
+
+	if myTurn {
+		msg := "Your turn"
+
+		op := &text.DrawOptions{}
+
+		w, _ := text.Measure(msg, GameFont, op.LineSpacing)
+
+		x := (float64((WindowWidth)/2) - (gridSize / 2) - w) / 2
+		y := 150.0
+
+		op.GeoM.Translate(x, y)
+
+		op.ColorScale.ScaleWithColor(color.Black)
+
+		text.Draw(screen, msg, GameFont, op)
 	}
 }

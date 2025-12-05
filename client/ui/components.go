@@ -14,16 +14,18 @@ type Button struct {
 	Text                string
 }
 
-type Menu struct {
-	MenuImage *ebiten.Image
-	BtnPlay   *Button
-	BtnQuit   *Button
+type MainMenu struct {
+	BtnPlay *Button
+	BtnQuit *Button
+}
+
+type WaitingMenu struct {
+	RotationAngle float64
 }
 
 type Grid struct {
-	Col        int
-	BoardImage *ebiten.Image
-	BoardData  [3][3]common.PlayerID
+	Col       int
+	BoardData [GridCol][GridCol]common.PlayerID
 }
 
 type Cell struct {
@@ -47,7 +49,7 @@ func NewButton(x, y, w, h float64, text string) *Button {
 	dc.SetHexColor("#2C3E50")
 	dc.Fill()
 
-	// dc.LoadFontFace("arial.ttf", 24)
+	dc.LoadFontFace("client/assets/font.ttf", 18)
 	dc.SetHexColor("#FFFFFF")
 	dc.DrawStringAnchored(text, w/2, h/2, 0.5, 0.35)
 
@@ -56,15 +58,18 @@ func NewButton(x, y, w, h float64, text string) *Button {
 	return b
 }
 
-func NewGrid(col, row int) *Grid {
-	g := &Grid{
-		Col: col,
-	}
+func NewMainMenu() *MainMenu {
+	menu := &MainMenu{}
 
-	gridImage := DrawGrid(col)
-	g.BoardImage = ebiten.NewImageFromImage(gridImage)
+	// Center buttons
+	buttonWidth, buttonHeight := 200.0, 60.0
+	centerX := (float64(WindowWidth) - buttonWidth) / 2
 
-	return g
+	// Create buttons
+	menu.BtnPlay = NewButton(centerX, 200, buttonWidth, buttonHeight, "Play")
+	menu.BtnQuit = NewButton(centerX, 300, buttonWidth, buttonHeight, "Quit")
+
+	return menu
 }
 
 func (b *Button) Draw(screen *ebiten.Image) {
@@ -73,10 +78,33 @@ func (b *Button) Draw(screen *ebiten.Image) {
 	screen.DrawImage(b.Image, opts)
 }
 
-func (m *Menu) Draw(screen *ebiten.Image) {
-	screen.DrawImage(m.MenuImage, nil)
+func (m *MainMenu) Draw(screen *ebiten.Image) {
+	screen.DrawImage(MainMenuImage, nil)
 	m.BtnPlay.Draw(screen)
 	m.BtnQuit.Draw(screen)
+}
+
+func (waitingMenu *WaitingMenu) Draw(screen *ebiten.Image) {
+	screen.DrawImage(WaitingMenuImage, nil)
+
+	w := WheelImage.Bounds().Dx()
+	h := WheelImage.Bounds().Dy()
+	halfW := float64(w) / 2.0
+	halfH := float64(h) / 2.0
+
+	op := &ebiten.DrawImageOptions{}
+
+	op.GeoM.Translate(-halfW, -halfH)
+
+	op.GeoM.Rotate(waitingMenu.RotationAngle)
+
+	screenCenterX := float64(WindowWidth) / 2.0
+	screenCenterY := float64(WindowHeight) / 2.0
+	op.GeoM.Translate(screenCenterX, screenCenterY)
+
+	op.ColorScale.Scale(0.8, 0.8, 1, 1)
+
+	screen.DrawImage(WheelImage, op)
 }
 
 func (b *Button) IsClicked() bool {
@@ -97,7 +125,7 @@ func (g *Grid) OnClick() (int, int, bool) {
 
 	mx, my := ebiten.CursorPosition()
 
-	gridW, gridH := g.BoardImage.Bounds().Dx(), g.BoardImage.Bounds().Dy()
+	gridW, gridH := GridImage.Bounds().Dx(), GridImage.Bounds().Dy()
 
 	offsetX := (WindowWidth - gridW) / 2
 	offsetY := (WindowHeight - gridH) / 2

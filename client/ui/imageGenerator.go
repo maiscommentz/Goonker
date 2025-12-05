@@ -1,10 +1,12 @@
 package ui
 
 import (
-	"image"
+	"image/color"
 	"log"
+	"math"
 
 	"github.com/fogleman/gg"
+	"github.com/hajimehoshi/ebiten/v2"
 )
 
 const (
@@ -18,7 +20,27 @@ const (
 	symbolLength = cellSize/2 - 2*lineWidth
 )
 
-func DrawGrid(col int) image.Image {
+var (
+	GridImage        *ebiten.Image
+	CircleImage      *ebiten.Image
+	CrossImage       *ebiten.Image
+	WheelImage       *ebiten.Image
+	MainMenuImage    *ebiten.Image
+	WaitingMenuImage *ebiten.Image
+	GameMenuImage    *ebiten.Image
+)
+
+func InitImages() {
+	DrawGrid(GridCol)
+	DrawCircle()
+	DrawCross()
+	DrawWaitingWheel()
+	DrawMainMenu(WindowWidth, WindowHeight, GameTitle)
+	DrawWaitingMenu(WindowWidth, WindowHeight)
+	DrawGameMenu(WindowWidth, WindowHeight)
+}
+
+func DrawGrid(col int) {
 	dc := gg.NewContext(gridSize, gridSize)
 
 	// Draw the background
@@ -48,14 +70,14 @@ func DrawGrid(col int) image.Image {
 	dc.DrawRectangle(offset, offset, float64(gridSize)-lineWidth, float64(gridSize)-lineWidth)
 	dc.Stroke()
 
-	return dc.Image()
+	GridImage = ebiten.NewImageFromImage(dc.Image())
 }
 
-func DrawCircle(col, row int) image.Image {
+func DrawCircle() {
 	dc := gg.NewContext(gridSize, gridSize)
 
-	centerX := float64(col*cellSize + cellSize/2)
-	centerY := float64(row*cellSize + cellSize/2)
+	centerX := float64(cellSize + cellSize/2)
+	centerY := float64(cellSize + cellSize/2)
 
 	dc.SetHexColor(gridBorderColor)
 	dc.SetLineWidth(lineWidth)
@@ -63,18 +85,18 @@ func DrawCircle(col, row int) image.Image {
 
 	dc.Stroke()
 
-	return dc.Image()
+	CircleImage = ebiten.NewImageFromImage(dc.Image())
 }
 
-func DrawCross(col, row int) image.Image {
+func DrawCross() {
 	dc := gg.NewContext(gridSize, gridSize)
 
 	dc.SetHexColor(gridBorderColor)
 	dc.SetLineWidth(lineWidth)
 	dc.SetLineCap(gg.LineCapRound)
 
-	centerX := float64(col*cellSize + cellSize/2)
-	centerY := float64(row*cellSize + cellSize/2)
+	centerX := float64(cellSize + cellSize/2)
+	centerY := float64(cellSize + cellSize/2)
 
 	// Diagonal from top-left to bottom-right \
 	dc.DrawLine(centerX-symbolLength, centerY-symbolLength, centerX+symbolLength, centerY+symbolLength)
@@ -84,17 +106,46 @@ func DrawCross(col, row int) image.Image {
 
 	dc.Stroke()
 
-	return dc.Image()
+	CrossImage = ebiten.NewImageFromImage(dc.Image())
 }
 
-func DrawMenu(width, height int, title string) image.Image {
+func DrawWaitingWheel() {
+	const S = 64
+	dc := gg.NewContext(S, S)
+
+	cx, cy := float64(S)/2, float64(S)/2
+	radius := 22.0
+	count := 12
+
+	for i := 0; i < count; i++ {
+		angle := float64(i) * (2 * math.Pi) / float64(count)
+		x := cx + math.Cos(angle)*radius
+		y := cy + math.Sin(angle)*radius
+
+		progress := float64(i) / float64(count)
+
+		r := 2.0 + (3.0 * progress)
+
+		alpha := uint8(50 + (205 * progress))
+
+		col := color.RGBA{R: 0, G: 0, B: 0, A: alpha}
+
+		dc.SetColor(col)
+		dc.DrawCircle(x, y, r)
+		dc.Fill()
+	}
+
+	WheelImage = ebiten.NewImageFromImage(dc.Image())
+}
+
+func DrawMainMenu(width, height int, title string) {
 	dc := gg.NewContext(width, height)
 
 	dc.SetHexColor(gridBackgroundColor)
 	dc.Clear()
 
 	// Load the font
-	if err := dc.LoadFontFace("arial.ttf", 48); err != nil {
+	if err := dc.LoadFontFace("client/assets/font.ttf", 48); err != nil {
 		log.Println("warning, couldn't load the font")
 	}
 
@@ -102,5 +153,39 @@ func DrawMenu(width, height int, title string) image.Image {
 	dc.SetHexColor("#2C3E50")
 	dc.DrawStringAnchored(title, float64(width/2), float64(height)/5, 0.5, 0.5)
 
-	return dc.Image()
+	MainMenuImage = ebiten.NewImageFromImage(dc.Image())
+}
+
+func DrawWaitingMenu(width, height int) {
+	dc := gg.NewContext(width, height)
+
+	dc.SetHexColor(gridBackgroundColor)
+	dc.Clear()
+
+	// Load the font
+	if err := dc.LoadFontFace("client/assets/font.ttf", 20); err != nil {
+		log.Println("warning, couldn't load the font")
+	}
+
+	dc.SetHexColor("#2C3E50")
+	dc.DrawStringAnchored("Waiting for another player...", float64(width/2), float64(height)/5, 0.5, 0.5)
+
+	WaitingMenuImage = ebiten.NewImageFromImage(dc.Image())
+}
+
+func DrawGameMenu(width, height int) {
+	dc := gg.NewContext(width, height)
+
+	dc.SetHexColor(gridBackgroundColor)
+	dc.Clear()
+
+	// Load the font
+	if err := dc.LoadFontFace("client/assets/font.ttf", 20); err != nil {
+		log.Println("warning, couldn't load the font")
+	}
+
+	dc.SetHexColor("#2C3E50")
+	dc.DrawStringAnchored("Playing Goonker", (float64(width/2)-(gridSize/2))/2, float64(height)/5, 0.5, 0.5)
+
+	GameMenuImage = ebiten.NewImageFromImage(dc.Image())
 }
