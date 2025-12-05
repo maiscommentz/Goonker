@@ -125,4 +125,4 @@ jobs:
             docker pull ghcr.io/${{ github.repository_owner }}/goonker-server:latest
             docker stop goonker-server || true
             docker rm goonker-server || true
-            docker run -d --name goonker-server ghcr.io/${{ github.repository_owner }}/goonker-server:latest
+            docker run -d --network=${{ secrets.SERVER_DOCKER_NETWORK }} --name goonker-server ghcr.io/${{ github.repository_owner }}/goonker-server:latest
