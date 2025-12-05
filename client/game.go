@@ -20,7 +20,7 @@ const (
 )
 
 type Game struct {
-	menu      *ui.Menu
+	menu      *ui.MainMenu
 	playMenu  *PlayMenu
 	state     int
 	netClient *NetworkClient
@@ -41,25 +41,16 @@ func (g *Game) Init() {
 	// Initialize network client
 	g.netClient = NewNetworkClient()
 
-	// Initialize menu
-	g.menu = &ui.Menu{}
+	// Initialize the UI
+	ui.Init()
 
-	// Center buttons
-	buttonWidth, buttonHeight := 200.0, 60.0
-	centerX := (float64(ui.WindowWidth) - buttonWidth) / 2
-
-	// Create buttons
-	g.menu.BtnPlay = ui.NewButton(centerX, 200, buttonWidth, buttonHeight, "Play")
-	g.menu.BtnQuit = ui.NewButton(centerX, 300, buttonWidth, buttonHeight, "Quit")
-
-	// Pre-render menu image
-	if g.menu.MenuImage == nil {
-		img := ui.DrawMenu(ui.WindowWidth, ui.WindowHeight, ui.GameTitle)
-		g.menu.MenuImage = ebiten.NewImageFromImage(img)
-	}
+	// Initialize the main menu
+	g.menu = ui.NewMainMenu()
 
 	// Initialize the grid
-	g.grid = ui.NewGrid(ui.GridCol, ui.GridCol)
+	g.grid = &ui.Grid{
+		Col: ui.GridCol,
+	}
 
 	// Set initial state
 	g.state = sMenu

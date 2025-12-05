@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/fogleman/gg"
+	"github.com/hajimehoshi/ebiten/v2"
 )
 
 const (
@@ -17,6 +18,22 @@ const (
 
 	symbolLength = cellSize/2 - 2*lineWidth
 )
+
+var (
+	GridImage     *ebiten.Image
+	CircleImage   *ebiten.Image
+	CrossImage    *ebiten.Image
+	MainMenuImage *ebiten.Image
+	GameMenuImage *ebiten.Image
+)
+
+func InitImages() {
+	GridImage = ebiten.NewImageFromImage(DrawGrid(GridCol))
+	CircleImage = ebiten.NewImageFromImage(DrawCircle(GridCol, GridCol))
+	CrossImage = ebiten.NewImageFromImage(DrawCross(GridCol, GridCol))
+	MainMenuImage = ebiten.NewImageFromImage(DrawMainMenu(WindowWidth, WindowHeight, GameTitle))
+	GameMenuImage = ebiten.NewImageFromImage(DrawGameMenu(WindowWidth, WindowHeight))
+}
 
 func DrawGrid(col int) image.Image {
 	dc := gg.NewContext(gridSize, gridSize)
@@ -87,20 +104,37 @@ func DrawCross(col, row int) image.Image {
 	return dc.Image()
 }
 
-func DrawMenu(width, height int, title string) image.Image {
+func DrawMainMenu(width, height int, title string) image.Image {
 	dc := gg.NewContext(width, height)
 
 	dc.SetHexColor(gridBackgroundColor)
 	dc.Clear()
 
 	// Load the font
-	if err := dc.LoadFontFace("arial.ttf", 48); err != nil {
+	if err := dc.LoadFontFace("client/assets/font.ttf", 48); err != nil {
 		log.Println("warning, couldn't load the font")
 	}
 
 	// Game title
 	dc.SetHexColor("#2C3E50")
 	dc.DrawStringAnchored(title, float64(width/2), float64(height)/5, 0.5, 0.5)
+
+	return dc.Image()
+}
+
+func DrawGameMenu(width, height int) image.Image {
+	dc := gg.NewContext(width, height)
+
+	dc.SetHexColor(gridBackgroundColor)
+	dc.Clear()
+
+	// Load the font
+	if err := dc.LoadFontFace("client/assets/font.ttf", 20); err != nil {
+		log.Println("warning, couldn't load the font")
+	}
+
+	dc.SetHexColor("#2C3E50")
+	dc.DrawStringAnchored("Playing Goonker", (float64(width/2)-(gridSize/2))/2, float64(height)/5, 0.5, 0.5)
 
 	return dc.Image()
 }
