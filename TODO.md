@@ -4,6 +4,8 @@
 [ ] Develop sPlayMenu state in client game for room selection and connection.
 [x] Test WebSocket connections with multiple clients in deployed environment.
 [x] Test WebSocket connection in WASM build of client.
+[x] Send to client when the game is over (win/lose/draw).
+[ ] Update client to handle game over state and display appropriate messages.
 
 [x] Implement bot support in client and server.
 [ ] Implement minimax algorithm for bot decision-making.

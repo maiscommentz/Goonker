@@ -19,6 +19,7 @@ const (
 	sGamePlaying
 	sGameWin
 	sGameLose
+	sGameDraw
 )
 
 type Game struct {
@@ -80,7 +81,7 @@ func (g *Game) Update() error {
 			// Note: For WASM/Localhost testing use ws://localhost:8080/ws?room=87DY68
 			go func() {
 				g.state = sWaitingGame
-				err := g.netClient.Connect("ws://localhost:8080/ws", "87DY68", false) // 172.20.10.2
+				err := g.netClient.Connect("ws://localhost:8080/ws", "87DY68", true) // 172.20.10.2
 				if err != nil {
 					g.state = sMainMenu
 					log.Println("Connection failed:", err)
@@ -144,6 +145,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		ui.RenderGame(screen, g.grid, g.isMyTurn)
 	case sGameLose:
 		ui.RenderGame(screen, g.grid, g.isMyTurn)
+	case sGameDraw:
+		ui.RenderGame(screen, g.grid, g.isMyTurn)
 	}
 }
 
@@ -184,6 +187,21 @@ func (g *Game) handleNetwork() {
 			g.grid.BoardData = p.Board
 			g.isMyTurn = (p.Turn == g.mySymbol)
 			log.Println("Board updated")
+
+		case common.MsgGameOver:
+			var p common.GameOverPayload
+			json.Unmarshal(packet.Data, &p)
+
+			if p.Winner == g.mySymbol {
+				g.state = sGameWin
+				log.Println("You Win!")
+			} else if p.Winner == common.Empty {
+				g.state = sGameDraw
+				log.Println("It's a Draw!")
+			} else {
+				g.state = sGameLose
+				log.Println("You Lose!")
+			}
 		}
 	}
 }

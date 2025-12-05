@@ -60,7 +60,7 @@ func (r *Room) AddPlayer(conn *websocket.Conn) common.PlayerID {
 	go r.listenPlayer(pid, conn)
 
 	// If the room is full or if it's a bot game, start
-	if r.IsFull() || (r.IsBotGame && pid == common.P1) {
+	if r.IsFull() {
 		go r.startGame()
 	}
 
@@ -87,12 +87,11 @@ func (r *Room) listenPlayer(pid common.PlayerID, conn *websocket.Conn) {
 		// Cleanup on disconnection
 		r.mutex.Lock()
 		delete(r.Players, pid)
-		remainingPlayers := len(r.Players)
 		r.mutex.Unlock()
 
 		conn.Close(websocket.StatusNormalClosure, "Goodbye")
 
-		if remainingPlayers == 0 {
+		if len(r.Players) == 0 {
 			GlobalHub.RemoveRoom(r.ID)
 			log.Printf("Room %s: All players disconnected, room removed", r.ID)
 		} else {
@@ -130,6 +129,12 @@ func (r *Room) handleMove(pid common.PlayerID, x, y int) {
 
 	// Send the update to everyone
 	r.broadcastUpdate_Locked()
+
+	// If the game is over, broadcast the result
+	if r.Logic.GameOver {
+		r.broadcastGameOver()
+		return
+	}
 
 	// If it's a Bot Game and the game is not over, the bot plays
 	if r.IsBotGame && !r.Logic.GameOver && r.Logic.Turn == common.P2 {
@@ -178,6 +183,21 @@ func (r *Room) broadcastUpdate_Locked() {
 	data, _ := json.Marshal(payload)
 	packet := common.Packet{Type: common.MsgUpdate, Data: data}
 
+	for _, p := range r.Players {
+		// Timeout of 5 seconds for sending
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		wsjson.Write(ctx, p.Conn, packet)
+		cancel()
+	}
+}
+
+func (r *Room) broadcastGameOver() {
+	log.Printf("Room %s: Broadcasting game over", r.ID)
+	payload := common.GameOverPayload{
+		Winner: r.Logic.Winner,
+	}
+	data, _ := json.Marshal(payload)
+	packet := common.Packet{Type: common.MsgGameOver, Data: data}
 	for _, p := range r.Players {
 		// Timeout of 5 seconds for sending
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
