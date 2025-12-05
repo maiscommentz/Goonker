@@ -225,6 +225,7 @@ func (r *Room) sendJson(c *websocket.Conn, msgType string, payload interface{}) 
 	ctx, cancel := context.WithTimeout(context.Background(), WriteTimeout)
 	defer cancel()
 
-	// Errors are ignored here, they will be handled in listenPlayer
-	wsjson.Write(ctx, c, packet)
+	if err := wsjson.Write(ctx, c, packet); err != nil {
+		log.Printf("Failed to send message: %v", err)
+	}
 }
