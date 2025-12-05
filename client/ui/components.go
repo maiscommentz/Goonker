@@ -19,6 +19,10 @@ type MainMenu struct {
 	BtnQuit *Button
 }
 
+type WaitingMenu struct {
+	RotationAngle float64
+}
+
 type Grid struct {
 	Col       int
 	BoardData [GridCol][GridCol]common.PlayerID
@@ -78,6 +82,29 @@ func (m *MainMenu) Draw(screen *ebiten.Image) {
 	screen.DrawImage(MainMenuImage, nil)
 	m.BtnPlay.Draw(screen)
 	m.BtnQuit.Draw(screen)
+}
+
+func (waitingMenu *WaitingMenu) Draw(screen *ebiten.Image) {
+	screen.DrawImage(WaitingMenuImage, nil)
+
+	w := WheelImage.Bounds().Dx()
+	h := WheelImage.Bounds().Dy()
+	halfW := float64(w) / 2.0
+	halfH := float64(h) / 2.0
+
+	op := &ebiten.DrawImageOptions{}
+
+	op.GeoM.Translate(-halfW, -halfH)
+
+	op.GeoM.Rotate(waitingMenu.RotationAngle)
+
+	screenCenterX := float64(WindowWidth) / 2.0
+	screenCenterY := float64(WindowHeight) / 2.0
+	op.GeoM.Translate(screenCenterX, screenCenterY)
+
+	op.ColorScale.Scale(0.8, 0.8, 1, 1)
+
+	screen.DrawImage(WheelImage, op)
 }
 
 func (b *Button) IsClicked() bool {

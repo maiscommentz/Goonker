@@ -50,6 +50,10 @@ func RenderMenu(screen *ebiten.Image, menu *MainMenu) {
 	menu.BtnQuit.Draw(screen)
 }
 
+func RenderWaitingGame(screen *ebiten.Image, waitingMenu *WaitingMenu) {
+	waitingMenu.Draw(screen)
+}
+
 func RenderGame(screen *ebiten.Image, grid *Grid, myTurn bool) {
 	screen.DrawImage(GameMenuImage, nil)
 
@@ -58,6 +62,8 @@ func RenderGame(screen *ebiten.Image, grid *Grid, myTurn bool) {
 
 	offsetX := float64(screenWidth-gridWidth) / 2
 	offsetY := float64(screenHeight-gridHeight) / 2
+
+	cellSize := float64(gridWidth) / float64(grid.Col)
 
 	op := &ebiten.DrawImageOptions{}
 	op.GeoM.Translate(offsetX, offsetY)
@@ -69,14 +75,19 @@ func RenderGame(screen *ebiten.Image, grid *Grid, myTurn bool) {
 
 			switch grid.BoardData[x][y] {
 			case common.P1:
-				img = ebiten.NewImageFromImage(DrawCross(x, y))
+				img = CrossImage
 			case common.P2:
-				img = ebiten.NewImageFromImage(DrawCircle(x, y))
+				img = CircleImage
 			}
 
 			if img != nil {
 				opSym := &ebiten.DrawImageOptions{}
+				cellX := (float64(x) - 1) * cellSize
+				cellY := (float64(y) - 1) * cellSize
+
+				opSym.GeoM.Translate(cellX, cellY)
 				opSym.GeoM.Translate(offsetX, offsetY)
+
 				screen.DrawImage(img, opSym)
 			}
 		}
