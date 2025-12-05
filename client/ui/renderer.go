@@ -16,6 +16,14 @@ const (
 	WindowWidth  = 960
 	WindowHeight = 540
 	GridCol      = 3
+
+	// Font sizes
+	TitleFontSize    = 48
+	SubtitleFontSize = 20
+	TextFontSize     = 12
+
+	// Positions
+	PlayerTurnTextYPos = 150
 )
 
 var (
@@ -23,6 +31,7 @@ var (
 	GameFont       *text.GoTextFace
 )
 
+// Init rendering components, like the images, the fonts...
 func Init() {
 	InitImages()
 
@@ -39,10 +48,11 @@ func Init() {
 
 	GameFont = &text.GoTextFace{
 		Source: gameFaceSource,
-		Size:   12,
+		Size:   TextFontSize,
 	}
 }
 
+// Render the main menu.
 func RenderMenu(screen *ebiten.Image, menu *MainMenu) {
 	screen.DrawImage(MainMenuImage, nil)
 	menu.Draw(screen)
@@ -50,10 +60,12 @@ func RenderMenu(screen *ebiten.Image, menu *MainMenu) {
 	menu.BtnQuit.Draw(screen)
 }
 
+// Render the waiting game menu.
 func RenderWaitingGame(screen *ebiten.Image, waitingMenu *WaitingMenu) {
 	waitingMenu.Draw(screen)
 }
 
+// Render the game.
 func RenderGame(screen *ebiten.Image, grid *Grid, myTurn bool) {
 	screen.DrawImage(GameMenuImage, nil)
 
@@ -94,16 +106,15 @@ func RenderGame(screen *ebiten.Image, grid *Grid, myTurn bool) {
 	}
 
 	if myTurn {
-		msg := "Your turn"
+		msg := "It's goonkin' time"
 
 		op := &text.DrawOptions{}
 
 		w, _ := text.Measure(msg, GameFont, op.LineSpacing)
 
 		x := (float64((WindowWidth)/2) - (gridSize / 2) - w) / 2
-		y := 150.0
 
-		op.GeoM.Translate(x, y)
+		op.GeoM.Translate(x, PlayerTurnTextYPos)
 
 		op.ColorScale.ScaleWithColor(color.Black)
 

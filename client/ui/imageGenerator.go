@@ -14,10 +14,20 @@ const (
 	lineWidth           = 12.0
 	gridBackgroundColor = "#F4F6F7"
 	gridBorderColor     = "#2C3E50"
+	cellSize            = (gridSize / 3)
+	symbolLength        = cellSize/2 - 2*lineWidth
 
-	cellSize = (gridSize / 3)
+	// Wheel
+	WheelSize         = 64
+	WheelDots         = 12
+	WheelRadius       = 22.0
+	WheelDotMinRadius = 2.0
+	WheelDotSizeRange = 3.0
+	WheelMinAlpha     = 50
+	WheelAlphaRange   = 205
 
-	symbolLength = cellSize/2 - 2*lineWidth
+	// Menu
+	TitleYRatio = 5
 )
 
 var (
@@ -30,6 +40,7 @@ var (
 	GameMenuImage    *ebiten.Image
 )
 
+// Initializes the images.
 func InitImages() {
 	DrawGrid(GridCol)
 	DrawCircle()
@@ -40,6 +51,7 @@ func InitImages() {
 	DrawGameMenu(WindowWidth, WindowHeight)
 }
 
+// Draw the image for the grid.
 func DrawGrid(col int) {
 	dc := gg.NewContext(gridSize, gridSize)
 
@@ -73,6 +85,7 @@ func DrawGrid(col int) {
 	GridImage = ebiten.NewImageFromImage(dc.Image())
 }
 
+// Draw the image for the circle.
 func DrawCircle() {
 	dc := gg.NewContext(gridSize, gridSize)
 
@@ -88,6 +101,7 @@ func DrawCircle() {
 	CircleImage = ebiten.NewImageFromImage(dc.Image())
 }
 
+// Draw the image for the cross.
 func DrawCross() {
 	dc := gg.NewContext(gridSize, gridSize)
 
@@ -109,24 +123,23 @@ func DrawCross() {
 	CrossImage = ebiten.NewImageFromImage(dc.Image())
 }
 
+// Draw the image for the waiting wheel.
 func DrawWaitingWheel() {
-	const S = 64
-	dc := gg.NewContext(S, S)
+	dc := gg.NewContext(WheelSize, WheelSize)
 
-	cx, cy := float64(S)/2, float64(S)/2
-	radius := 22.0
-	count := 12
+	cx, cy := float64(WheelSize)/2, float64(WheelSize)/2
+	radius := WheelRadius
 
-	for i := 0; i < count; i++ {
-		angle := float64(i) * (2 * math.Pi) / float64(count)
+	for i := 0; i < WheelDots; i++ {
+		angle := float64(i) * (2 * math.Pi) / float64(WheelDots)
 		x := cx + math.Cos(angle)*radius
 		y := cy + math.Sin(angle)*radius
 
-		progress := float64(i) / float64(count)
+		progress := float64(i) / float64(WheelDots)
 
-		r := 2.0 + (3.0 * progress)
+		r := WheelDotMinRadius + (WheelDotSizeRange * progress)
 
-		alpha := uint8(50 + (205 * progress))
+		alpha := uint8(WheelMinAlpha + (WheelAlphaRange * progress))
 
 		col := color.RGBA{R: 0, G: 0, B: 0, A: alpha}
 
@@ -138,6 +151,7 @@ func DrawWaitingWheel() {
 	WheelImage = ebiten.NewImageFromImage(dc.Image())
 }
 
+// Draw the image for the main menu.
 func DrawMainMenu(width, height int, title string) {
 	dc := gg.NewContext(width, height)
 
@@ -145,17 +159,18 @@ func DrawMainMenu(width, height int, title string) {
 	dc.Clear()
 
 	// Load the font
-	if err := dc.LoadFontFace("client/assets/font.ttf", 48); err != nil {
+	if err := dc.LoadFontFace("client/assets/font.ttf", TitleFontSize); err != nil {
 		log.Println("warning, couldn't load the font")
 	}
 
 	// Game title
-	dc.SetHexColor("#2C3E50")
-	dc.DrawStringAnchored(title, float64(width/2), float64(height)/5, 0.5, 0.5)
+	dc.SetHexColor(gridBorderColor)
+	dc.DrawStringAnchored(title, float64(width/2), float64(height)/TitleYRatio, 0.5, 0.5)
 
 	MainMenuImage = ebiten.NewImageFromImage(dc.Image())
 }
 
+// Draw the image for the waiting menu.
 func DrawWaitingMenu(width, height int) {
 	dc := gg.NewContext(width, height)
 
@@ -163,16 +178,17 @@ func DrawWaitingMenu(width, height int) {
 	dc.Clear()
 
 	// Load the font
-	if err := dc.LoadFontFace("client/assets/font.ttf", 20); err != nil {
+	if err := dc.LoadFontFace("client/assets/font.ttf", SubtitleFontSize); err != nil {
 		log.Println("warning, couldn't load the font")
 	}
 
-	dc.SetHexColor("#2C3E50")
-	dc.DrawStringAnchored("Waiting for another player...", float64(width/2), float64(height)/5, 0.5, 0.5)
+	dc.SetHexColor(gridBorderColor)
+	dc.DrawStringAnchored("Waiting for another player...", float64(width/2), float64(height)/TitleYRatio, 0.5, 0.5)
 
 	WaitingMenuImage = ebiten.NewImageFromImage(dc.Image())
 }
 
+// Draw the image for the game menu.
 func DrawGameMenu(width, height int) {
 	dc := gg.NewContext(width, height)
 
@@ -180,12 +196,12 @@ func DrawGameMenu(width, height int) {
 	dc.Clear()
 
 	// Load the font
-	if err := dc.LoadFontFace("client/assets/font.ttf", 20); err != nil {
+	if err := dc.LoadFontFace("client/assets/font.ttf", SubtitleFontSize); err != nil {
 		log.Println("warning, couldn't load the font")
 	}
 
-	dc.SetHexColor("#2C3E50")
-	dc.DrawStringAnchored("Playing Goonker", (float64(width/2)-(gridSize/2))/2, float64(height)/5, 0.5, 0.5)
+	dc.SetHexColor(gridBorderColor)
+	dc.DrawStringAnchored("Playing Goonker", (float64(width/2)-(gridSize/2))/2, float64(height)/TitleYRatio, 0.5, 0.5)
 
 	GameMenuImage = ebiten.NewImageFromImage(dc.Image())
 }

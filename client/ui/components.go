@@ -8,6 +8,26 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 )
 
+const (
+	// Button configuration
+	ButtonWidth        = 200.0
+	ButtonHeight       = 60.0
+	ButtonCornerRadius = 10.0
+	ButtonTextYAnchor  = 0.35
+
+	// Button size
+	MenuPlayBtnY = 200.0
+	MenuQuitBtnY = 300.0
+
+	// Spinning wheel parameters
+	WheelTintRed   = 0.8
+	WheelTintGreen = 0.8
+	WheelTintBlue  = 1.0
+
+	// Assets
+	FontPath = "client/assets/font.ttf"
+)
+
 type Button struct {
 	X, Y, Width, Height float64
 	Image               *ebiten.Image
@@ -21,6 +41,10 @@ type MainMenu struct {
 
 type WaitingMenu struct {
 	RotationAngle float64
+}
+
+type PlayMenu struct {
+	// TODO: Add fields for play menu (e.g., room selection, bot option)
 }
 
 type Grid struct {
@@ -37,6 +61,7 @@ type Drawable interface {
 	Draw(screen *ebiten.Image)
 }
 
+// Constructor for the button.
 func NewButton(x, y, w, h float64, text string) *Button {
 	b := &Button{
 		X: x, Y: y, Width: w, Height: h,
@@ -45,45 +70,48 @@ func NewButton(x, y, w, h float64, text string) *Button {
 
 	dc := gg.NewContext(int(w), int(h))
 
-	dc.DrawRoundedRectangle(0, 0, w, h, 10)
-	dc.SetHexColor("#2C3E50")
+	dc.DrawRoundedRectangle(0, 0, w, h, ButtonCornerRadius)
+	dc.SetHexColor(gridBorderColor)
 	dc.Fill()
 
-	dc.LoadFontFace("client/assets/font.ttf", 18)
-	dc.SetHexColor("#FFFFFF")
-	dc.DrawStringAnchored(text, w/2, h/2, 0.5, 0.35)
+	dc.LoadFontFace("client/assets/font.ttf", SubtitleFontSize)
+	dc.SetHexColor(gridBackgroundColor)
+	dc.DrawStringAnchored(text, w/2, h/2, 0.5, ButtonTextYAnchor)
 
 	b.Image = ebiten.NewImageFromImage(dc.Image())
 
 	return b
 }
 
+// Constructor for the main menu.
 func NewMainMenu() *MainMenu {
 	menu := &MainMenu{}
 
 	// Center buttons
-	buttonWidth, buttonHeight := 200.0, 60.0
-	centerX := (float64(WindowWidth) - buttonWidth) / 2
+	centerX := (float64(WindowWidth) - ButtonWidth) / 2
 
 	// Create buttons
-	menu.BtnPlay = NewButton(centerX, 200, buttonWidth, buttonHeight, "Play")
-	menu.BtnQuit = NewButton(centerX, 300, buttonWidth, buttonHeight, "Quit")
+	menu.BtnPlay = NewButton(centerX, MenuPlayBtnY, ButtonWidth, ButtonHeight, "Play")
+	menu.BtnQuit = NewButton(centerX, MenuQuitBtnY, ButtonWidth, ButtonHeight, "Quit")
 
 	return menu
 }
 
+// Draw the button to the screen.
 func (b *Button) Draw(screen *ebiten.Image) {
 	opts := &ebiten.DrawImageOptions{}
 	opts.GeoM.Translate(b.X, b.Y)
 	screen.DrawImage(b.Image, opts)
 }
 
+// Draw the main menu to the screen.
 func (m *MainMenu) Draw(screen *ebiten.Image) {
 	screen.DrawImage(MainMenuImage, nil)
 	m.BtnPlay.Draw(screen)
 	m.BtnQuit.Draw(screen)
 }
 
+// Draw the waiting menu to the screen.
 func (waitingMenu *WaitingMenu) Draw(screen *ebiten.Image) {
 	screen.DrawImage(WaitingMenuImage, nil)
 
@@ -102,11 +130,12 @@ func (waitingMenu *WaitingMenu) Draw(screen *ebiten.Image) {
 	screenCenterY := float64(WindowHeight) / 2.0
 	op.GeoM.Translate(screenCenterX, screenCenterY)
 
-	op.ColorScale.Scale(0.8, 0.8, 1, 1)
+	op.ColorScale.Scale(WheelTintRed, WheelTintGreen, WheelTintBlue, 1)
 
 	screen.DrawImage(WheelImage, op)
 }
 
+// Check if a button is clicked.
 func (b *Button) IsClicked() bool {
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 		mx, my := ebiten.CursorPosition()
@@ -118,6 +147,7 @@ func (b *Button) IsClicked() bool {
 	return false
 }
 
+// Get the clicked cell.
 func (g *Grid) OnClick() (int, int, bool) {
 	if !inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 		return -1, -1, false
