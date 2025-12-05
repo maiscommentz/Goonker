@@ -20,12 +20,16 @@ const (
 	sGameWin
 	sGameLose
 	sGameDraw
+
+	// Network configuration
+	serverAddress = "ws://localhost:8080/ws"
+	roomId        = "87DY68"
 )
 
 type Game struct {
 	menu        *ui.MainMenu
 	waitingMenu *ui.WaitingMenu
-	playMenu    *PlayMenu
+	playMenu    *ui.PlayMenu
 	state       int
 	netClient   *NetworkClient
 	grid        *ui.Grid
@@ -34,13 +38,7 @@ type Game struct {
 	isMyTurn bool
 }
 
-type PlayMenu struct {
-	// TODO: Add fields for play menu (e.g., room selection, bot option)
-}
-
-/**
- * Initializes the game state.
- */
+// Init the game
 func (g *Game) Init() {
 	// Initialize network client
 	g.netClient = NewNetworkClient()
@@ -62,10 +60,8 @@ func (g *Game) Init() {
 	g.state = sMainMenu
 }
 
-/**
- * Updates the game state every tick.
- * Typically called every tick (1/60[s] by default).
- */
+// Update the game state every tick.
+// Typically called every tick (1/60[s] by default).
 func (g *Game) Update() error {
 
 	// Always poll the network for incoming messages first
@@ -81,7 +77,7 @@ func (g *Game) Update() error {
 			// Note: For WASM/Localhost testing use ws://localhost:8080/ws?room=87DY68
 			go func() {
 				g.state = sWaitingGame
-				err := g.netClient.Connect("ws://localhost:8080/ws", "87DY68", true) // 172.20.10.2
+				err := g.netClient.Connect("ws://localhost:8080/ws", "87DY68", false) // 172.20.10.2
 				if err != nil {
 					g.state = sMainMenu
 					log.Println("Connection failed:", err)
@@ -127,10 +123,8 @@ func (g *Game) Update() error {
 	return nil
 }
 
-/**
- * Draws the game screen.
- * Called every frame (typically 1/60[s] for 60Hz display).
- */
+// Draw the game screen.
+// Called every frame (typically 1/60[s] for 60Hz display).
 func (g *Game) Draw(screen *ebiten.Image) {
 	switch g.state {
 	case sMainMenu:
@@ -150,16 +144,12 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 }
 
-/**
- * Defines the game's screen dimensions.
- */
+// Defines the game's screen dimensions.
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
 	return ui.WindowWidth, ui.WindowHeight
 }
 
-/**
- * Handles incoming network messages.
- */
+// Handles incoming network messages.
 func (g *Game) handleNetwork() {
 	if g.netClient == nil {
 		return

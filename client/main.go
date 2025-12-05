@@ -7,6 +7,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
+// main is the entry point of the game
 func main() {
 	log.Println("Start client")
 	game := &Game{}
