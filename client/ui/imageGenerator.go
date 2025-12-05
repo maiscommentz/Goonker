@@ -1,10 +1,10 @@
 package ui
 
 import (
+	"Goonker/common"
 	"image/color"
 	"log"
 	"math"
-	"Goonker/common"
 
 	"github.com/fogleman/gg"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -40,7 +40,7 @@ var (
 	WaitingMenuImage *ebiten.Image
 	GameMenuImage    *ebiten.Image
 	WinMenuImage     *ebiten.Image
-	LooseMenuImage   *ebiten.Image
+	LoseMenuImage    *ebiten.Image
 	DrawMenuImage    *ebiten.Image
 )
 
@@ -54,7 +54,7 @@ func InitImages() {
 	DrawWaitingMenu(WindowWidth, WindowHeight)
 	DrawGameMenu(WindowWidth, WindowHeight)
 	DrawWinMenu(WindowWidth, WindowHeight)
-	DrawLooseMenu(WindowWidth, WindowHeight)
+	DrawLoseMenu(WindowWidth, WindowHeight)
 	DrawDrawMenu(WindowWidth, WindowHeight)
 }
 
@@ -231,8 +231,8 @@ func DrawWinMenu(width, height int) {
 	WinMenuImage = ebiten.NewImageFromImage(dc.Image())
 }
 
-// Draw the image for the loose menu.
-func DrawLooseMenu(width, height int) {
+// Draw the image for the lose menu.
+func DrawLoseMenu(width, height int) {
 	dc := gg.NewContext(width, height)
 
 	dc.SetHexColor(gridBackgroundColor)
@@ -244,9 +244,9 @@ func DrawLooseMenu(width, height int) {
 	}
 
 	dc.SetHexColor(gridBorderColor)
-	dc.DrawStringAnchored("You lost ;(", float64(width/2), float64(height)/TitleYRatio, 0.5, 0.5)
+	dc.DrawStringAnchored("You lost :(", float64(width/2), float64(height)/TitleYRatio, 0.5, 0.5)
 
-	LooseMenuImage = ebiten.NewImageFromImage(dc.Image())
+	LoseMenuImage = ebiten.NewImageFromImage(dc.Image())
 }
 
 // Draw the image for the draw menu.

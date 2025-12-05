@@ -17,8 +17,8 @@ import (
 // Server configuration constants
 const (
 	// Network configuration
-	ServerPort = ":8080"
-	WsRoute       = "/ws"
+	ServerPort       = ":8080"
+	WsRoute          = "/ws"
 	HandshakeTimeout = 5 * time.Second
 
 	// Closure Reasons

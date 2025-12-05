@@ -18,7 +18,7 @@ const (
 	sWaitingGame
 	sGamePlaying
 	sGameWin
-	sGameLoose
+	sGameLose
 	sGameDraw
 
 	// Network configuration
@@ -76,8 +76,8 @@ func (g *Game) Update() error {
 			// TODO: This block will be placed in PlayMenu later
 			// Try to connect to server (Async)
 			// Note: For WASM/Localhost testing use ws://localhost:8080/ws?room=87DY68
+			g.state = sWaitingGame
 			go func() {
-				g.state = sWaitingGame
 				err := g.netClient.Connect(serverAddress, roomId, isBotGame) // 172.20.10.2
 				if err != nil {
 					g.state = sMainMenu
@@ -138,8 +138,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		ui.RenderGame(screen, g.grid, g.isMyTurn)
 	case sGameWin:
 		ui.RenderWin(screen)
-	case sGameLoose:
-		ui.RenderLoose(screen)
+	case sGameLose:
+		ui.RenderLose(screen)
 	case sGameDraw:
 		ui.RenderDraw(screen)
 	}
@@ -165,7 +165,10 @@ func (g *Game) handleNetwork() {
 		switch packet.Type {
 		case common.MsgGameStart:
 			var p common.GameStartPayload
-			json.Unmarshal(packet.Data, &p)
+			if err := json.Unmarshal(packet.Data, &p); err != nil {
+				log.Printf("Failed to unmarshal %s: %v", packet.Type, err)
+				continue
+			}
 
 			g.mySymbol = p.YouAre
 			g.state = sGamePlaying // Server authorized us to start
@@ -173,7 +176,10 @@ func (g *Game) handleNetwork() {
 
 		case common.MsgUpdate:
 			var p common.UpdatePayload
-			json.Unmarshal(packet.Data, &p)
+			if err := json.Unmarshal(packet.Data, &p); err != nil {
+				log.Printf("Failed to unmarshal %s: %v", packet.Type, err)
+				continue
+			}
 
 			g.grid.BoardData = p.Board
 			g.isMyTurn = (p.Turn == g.mySymbol)
@@ -181,7 +187,10 @@ func (g *Game) handleNetwork() {
 
 		case common.MsgGameOver:
 			var p common.GameOverPayload
-			json.Unmarshal(packet.Data, &p)
+			if err := json.Unmarshal(packet.Data, &p); err != nil {
+				log.Printf("Failed to unmarshal %s: %v", packet.Type, err)
+				continue
+			}
 
 			if p.Winner == g.mySymbol {
 				g.state = sGameWin
@@ -190,7 +199,7 @@ func (g *Game) handleNetwork() {
 				g.state = sGameDraw
 				log.Println("It's a Draw!")
 			} else {
-				g.state = sGameLoose
+				g.state = sGameLose
 				log.Println("You Lose!")
 			}
 		}

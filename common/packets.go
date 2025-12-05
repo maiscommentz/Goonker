@@ -19,11 +19,11 @@ const (
 
 // Message types
 const (
-	MsgJoin       = "join"       // Client -> Server: "I want to join room X"
-	MsgGameStart  = "game_start" // Server -> Client: "Match found, you are X"
-	MsgClick      = "click"      // Client -> Server: "I clicked cell 4"
-	MsgUpdate     = "update"     // Server -> Client: "New board state"
-	MsgGameOver   = "game_over"  // Server -> Client: "Game over, result is X"
+	MsgJoin      = "join"       // Client -> Server: "I want to join room X"
+	MsgGameStart = "game_start" // Server -> Client: "Match found, you are X"
+	MsgClick     = "click"      // Client -> Server: "I clicked cell 4"
+	MsgUpdate    = "update"     // Server -> Client: "New board state"
+	MsgGameOver  = "game_over"  // Server -> Client: "Game over, result is X"
 )
 
 // Packet is the generic message structure for communication.
@@ -34,7 +34,7 @@ type Packet struct {
 
 // GameStartPayload is sent by server to notify game start.
 type GameStartPayload struct {
-	YouAre     PlayerID `json:"you_are"` // 1 or 2
+	YouAre PlayerID `json:"you_are"` // 1 or 2
 }
 
 // ClickPayload is sent by client with (x,y) of clicked cell.
@@ -46,13 +46,13 @@ type ClickPayload struct {
 // UpdatePayload is sent by server to sync the board.
 type UpdatePayload struct {
 	Board [BoardSize][BoardSize]PlayerID `json:"board"`
-	Turn  PlayerID       `json:"turn"` // Whose turn is it?
+	Turn  PlayerID                       `json:"turn"` // Whose turn is it?
 }
 
 // JoinPayload is sent by client to join a room.
 type JoinPayload struct {
-    RoomID   string `json:"room_id"`
-    IsBot    bool   `json:"is_bot"` // Whether to play against a bot
+	RoomID string `json:"room_id"`
+	IsBot  bool   `json:"is_bot"` // Whether to play against a bot
 }
 
 // GameOverPayload is sent by server when game ends.

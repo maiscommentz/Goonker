@@ -9,7 +9,7 @@ import (
 // Constants for bot behavior
 const (
 	BotThinkDelay = 500 * time.Millisecond
-	InvalidCoord = -1
+	InvalidCoord  = -1
 )
 
 // GetBotMove scans the board for available moves and selects one at random.
@@ -34,7 +34,8 @@ func GetBotMove(logic *GameLogic) (int, int) {
 	}
 
 	// Randomly select one of the available moves
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	src := rand.NewSource(time.Now().UnixNano())
+	r := rand.New(src)
 	choice := availableMoves[r.Intn(len(availableMoves))]
 	return choice[0], choice[1]
 }

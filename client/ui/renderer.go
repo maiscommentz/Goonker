@@ -94,6 +94,8 @@ func RenderGame(screen *ebiten.Image, grid *Grid, myTurn bool) {
 
 			if img != nil {
 				opSym := &ebiten.DrawImageOptions{}
+				// Subtract 1 from x and y to align symbols with the grid cells,
+				// because the grid drawing starts at (cellSize, cellSize) rather than (0,0).
 				cellX := (float64(x) - 1) * cellSize
 				cellY := (float64(y) - 1) * cellSize
 
@@ -127,9 +129,9 @@ func RenderWin(screen *ebiten.Image) {
 	screen.DrawImage(WinMenuImage, nil)
 }
 
-// Render loose screen.
-func RenderLoose(screen *ebiten.Image) {
-	screen.DrawImage(LooseMenuImage, nil)
+// Render lose screen.
+func RenderLose(screen *ebiten.Image) {
+	screen.DrawImage(LoseMenuImage, nil)
 }
 
 // Render draw screen.

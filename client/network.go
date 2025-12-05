@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -54,20 +55,24 @@ func (c *NetworkClient) Connect(url string, roomID string, isBot bool) error {
 	c.sendMu.Unlock()
 
 	joinPayload := common.JoinPayload{
-        RoomID: roomID,
-        IsBot:  isBot,
-    }
-    
-    data, _ := json.Marshal(joinPayload)
-    packet := common.Packet{
-        Type: common.MsgJoin,
-        Data: data,
-    }
+		RoomID: roomID,
+		IsBot:  isBot,
+	}
+
+	data, err := json.Marshal(joinPayload)
+	if err != nil {
+		c.conn.Close(websocket.StatusInternalError, "failed to marshal join payload")
+		return err
+	}
+	packet := common.Packet{
+		Type: common.MsgJoin,
+		Data: data,
+	}
 
 	if err := wsjson.Write(ctx, c.conn, packet); err != nil {
-        c.conn.Close(websocket.StatusInternalError, "failed to send join")
-        return err
-    }
+		c.conn.Close(websocket.StatusInternalError, "failed to send join")
+		return err
+	}
 
 	// Start listening immediately in a separate goroutine
 	go c.listen()
@@ -85,7 +90,7 @@ func (c *NetworkClient) listen() {
 			c.conn = nil // Important: Reset so Connect() works again
 		}
 		c.sendMu.Unlock()
-		
+
 		if c.ctxCancel != nil {
 			c.ctxCancel()
 		}
@@ -93,7 +98,7 @@ func (c *NetworkClient) listen() {
 
 	for {
 		var packet common.Packet
-		
+
 		// Use the client context for reading
 		err := wsjson.Read(c.ctx, c.conn, &packet)
 		if err != nil {
@@ -121,7 +126,7 @@ func (c *NetworkClient) SendPacket(packet common.Packet) error {
 
 	if c.conn == nil {
 		log.Println("Not connected to server")
-		return nil 
+		return fmt.Errorf("not connected to server")
 	}
 
 	ctx, cancel := context.WithTimeout(c.ctx, time.Second*5)

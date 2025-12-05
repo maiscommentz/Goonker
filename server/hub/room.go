@@ -16,9 +16,9 @@ import (
 
 // Hub configuration constants
 const (
-	WriteTimeout = 5 * time.Second
-	CloseMessage = "Goodbye"
-	MaxPlayers = 2
+	WriteTimeout      = 5 * time.Second
+	CloseMessage      = "Goodbye"
+	MaxPlayers        = 2
 	MaxPlayersWithBot = 1
 )
 
@@ -30,10 +30,10 @@ type Player struct {
 
 // Room represents a game room with players and game logic
 type Room struct {
-	ID        string
-	Players   map[common.PlayerID]*Player
-	Logic     *logic.GameLogic
-	
+	ID      string
+	Players map[common.PlayerID]*Player
+	Logic   *logic.GameLogic
+
 	mutex     sync.Mutex
 	IsBotGame bool
 }
@@ -66,7 +66,7 @@ func (r *Room) AddPlayer(conn *websocket.Conn) common.PlayerID {
 	}
 
 	r.Players[pid] = &Player{Conn: conn, ID: pid}
-	
+
 	// Start listening to this client on a separate goroutine
 	go r.listenPlayer(pid, conn)
 
@@ -158,14 +158,15 @@ func (r *Room) handleMove(pid common.PlayerID, x, y int) {
 	// If it's a Bot Game and the game is not over, the bot plays.
 	// Launch the bot in a goroutine to avoid blocking the mutex for too long.
 	if r.IsBotGame && !r.Logic.GameOver && r.Logic.Turn == common.P2 {
-		go func() {
-			// pass a snapshot of the board to GetBotMove to avoid race conditions
-			botX, botY := logic.GetBotMove(r.Logic)
+		// Take a snapshot of the current game logic
+		logicSnapshot := r.Logic
+		go func(snapshot *logic.GameLogic) {
+			botX, botY := logic.GetBotMove(snapshot)
 			if botX != logic.InvalidCoord {
 				// Valid move returned
 				r.handleMove(common.P2, botX, botY)
 			}
-		}()
+		}(logicSnapshot) // Pass a snapshot to avoid race conditions
 	}
 }
 
