@@ -73,7 +73,7 @@ func DrawGrid(col int) {
 
 	cellSize := float64(gridSize) / float64(col)
 
-	for i := 1; i < col; i++ {
+	for i := range col {
 		pos := float64(i) * cellSize
 
 		// Vertical line
@@ -137,7 +137,7 @@ func DrawWaitingWheel() {
 	cx, cy := float64(WheelSize)/2, float64(WheelSize)/2
 	radius := WheelRadius
 
-	for i := 0; i < WheelDots; i++ {
+	for i := range WheelDots {
 		angle := float64(i) * (2 * math.Pi) / float64(WheelDots)
 		x := cx + math.Cos(angle)*radius
 		y := cy + math.Sin(angle)*radius

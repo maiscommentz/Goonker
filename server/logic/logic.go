@@ -19,24 +19,23 @@ const (
 	SymbolEmpty = "."
 	SeparatorV  = " | "
 	SeparatorH  = "---------"
-
 )
 
 // Error messages
 var (
-	ErrGameOver      = errors.New("game is over")
-	ErrNotYourTurn   = errors.New("not your turn")
-	ErrOutOfBounds   = errors.New("out of bounds")
-	ErrCellOccupied  = errors.New("cell already occupied")
+	ErrGameOver     = errors.New("game is over")
+	ErrNotYourTurn  = errors.New("not your turn")
+	ErrOutOfBounds  = errors.New("out of bounds")
+	ErrCellOccupied = errors.New("cell already occupied")
 )
 
 // GameLogic manages the state of a Tic-Tac-Toe game
 type GameLogic struct {
-	Board [common.BoardSize][common.BoardSize]common.PlayerID
-	Turn  common.PlayerID
-	Winner common.PlayerID
+	Board    [common.BoardSize][common.BoardSize]common.PlayerID
+	Turn     common.PlayerID
+	Winner   common.PlayerID
 	GameOver bool
-	Moves int
+	Moves    int
 }
 
 // NewGameLogic initializes a new game state.
@@ -90,9 +89,9 @@ func (g *GameLogic) checkWin(p common.PlayerID) bool {
 	boardSize := common.BoardSize
 
 	// Check Rows and Columns
-	for i := 0; i < boardSize; i++ {
+	for i := range boardSize {
 		rowWin, colWin := true, true
-		for j := 0; j < boardSize; j++ {
+		for j := range boardSize {
 			// Check Column i (varying rows j)
 			if board[i][j] != p {
 				colWin = false
@@ -109,7 +108,7 @@ func (g *GameLogic) checkWin(p common.PlayerID) bool {
 
 	// Check Diagonals
 	diag1, diag2 := true, true
-	for i := 0; i < boardSize; i++ {
+	for i := range boardSize {
 		// Top-left to bottom-right (0,0 -> 1,1 -> 2,2)
 		if board[i][i] != p {
 			diag1 = false
@@ -125,9 +124,9 @@ func (g *GameLogic) checkWin(p common.PlayerID) bool {
 
 // PrintConsoleBoard renders the board state to the console for debugging.
 func (g *GameLogic) PrintConsoleBoard() {
-	for y := 0; y < common.BoardSize; y++ {
+	for y := range common.BoardSize {
 		var line []string
-		for x := 0; x < common.BoardSize; x++ {
+		for x := range common.BoardSize {
 			cell := g.Board[x][y]
 			switch cell {
 			case common.P1:
@@ -139,7 +138,7 @@ func (g *GameLogic) PrintConsoleBoard() {
 			}
 		}
 		fmt.Println(strings.Join(line, SeparatorV))
-		
+
 		// Print horizontal separator only between rows
 		if y < common.BoardSize-1 {
 			fmt.Println(SeparatorH)

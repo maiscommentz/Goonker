@@ -8,7 +8,7 @@
 
 [x] Implement bot support in client and server.
 [ ] Develop sPlayMenu state in client game for room selection and connection.
-[ ] Implement minimax algorithm for bot decision-making.
+[x] Implement minimax algorithm for bot decision-making.
 [ ] Implement minigames in client and server.
 [x] Implement Win and Lose conditions in the game logic.
 [ ] Optimize win/lose checking algorithm for performance.
