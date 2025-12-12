@@ -31,7 +31,7 @@ func NewNetworkClient() *NetworkClient {
 }
 
 // Connect dials the server (ws://localhost:8080/ws for local dev)
-func (c *NetworkClient) Connect(url string, roomID string, isBot bool) error {
+func (c *NetworkClient) Connect(url string) error {
 	// Thread-safe check if already connected
 	c.sendMu.Lock()
 	if c.conn != nil {
@@ -54,6 +54,28 @@ func (c *NetworkClient) Connect(url string, roomID string, isBot bool) error {
 	c.ctx, c.ctxCancel = context.WithCancel(context.Background())
 	c.sendMu.Unlock()
 
+	// Start listening immediately in a separate goroutine
+	go c.listen()
+
+	log.Println("Connected to server at", url)
+	return nil
+}
+
+func (c *NetworkClient) GetRooms() error {
+	err := c.SendPacket(common.Packet{
+		Type: common.MsgGetRooms,
+		Data: nil,
+	})
+
+	if err != nil {
+		log.Println("Failed to send move:", err)
+		return err
+	}
+
+	return nil
+}
+
+func (c *NetworkClient) JoinGame(roomID string, isBot bool) error {
 	joinPayload := common.JoinPayload{
 		RoomID: roomID,
 		IsBot:  isBot,
@@ -69,15 +91,11 @@ func (c *NetworkClient) Connect(url string, roomID string, isBot bool) error {
 		Data: data,
 	}
 
-	if err := wsjson.Write(ctx, c.conn, packet); err != nil {
+	if err := wsjson.Write(c.ctx, c.conn, packet); err != nil {
 		c.conn.Close(websocket.StatusInternalError, "failed to send join")
 		return err
 	}
 
-	// Start listening immediately in a separate goroutine
-	go c.listen()
-
-	log.Println("Connected to server at", url)
 	return nil
 }
 

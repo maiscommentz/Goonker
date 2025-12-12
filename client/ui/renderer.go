@@ -56,8 +56,12 @@ func Init() {
 func RenderMenu(screen *ebiten.Image, menu *MainMenu) {
 	screen.DrawImage(MainMenuImage, nil)
 	menu.Draw(screen)
-	menu.BtnPlay.Draw(screen)
-	menu.BtnQuit.Draw(screen)
+}
+
+// Render the play menu.
+func RenderPlayMenu(screen *ebiten.Image, menu *PlayMenu) {
+	screen.DrawImage(PlayMenuImage, nil)
+	menu.Draw(screen)
 }
 
 // Render the waiting game menu.

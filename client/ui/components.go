@@ -2,6 +2,7 @@ package ui
 
 import (
 	"Goonker/common"
+	"log"
 
 	"github.com/fogleman/gg"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -44,7 +45,14 @@ type WaitingMenu struct {
 }
 
 type PlayMenu struct {
-	// TODO: Add fields for play menu (e.g., room selection, bot option)
+	Rooms     []Room
+	RoomIndex int
+}
+
+type Room struct {
+	Btn         *Button
+	Id          string
+	PlayerCount int
 }
 
 type Grid struct {
@@ -97,6 +105,13 @@ func NewMainMenu() *MainMenu {
 	return menu
 }
 
+// Constructor for the play menu.
+func NewPlayMenu() *PlayMenu {
+	menu := &PlayMenu{}
+
+	return menu
+}
+
 // Draw the button to the screen.
 func (b *Button) Draw(screen *ebiten.Image) {
 	opts := &ebiten.DrawImageOptions{}
@@ -109,6 +124,25 @@ func (m *MainMenu) Draw(screen *ebiten.Image) {
 	screen.DrawImage(MainMenuImage, nil)
 	m.BtnPlay.Draw(screen)
 	m.BtnQuit.Draw(screen)
+}
+
+// Draw the play menu to the screen.
+func (m *PlayMenu) Draw(screen *ebiten.Image) {
+	screen.DrawImage(PlayMenuImage, nil)
+
+	for i, room := range m.Rooms {
+		log.Printf("%d %s", i, room)
+		room.Draw(screen, i)
+	}
+}
+
+// Draw the room at the specified index
+func (r *Room) Draw(screen *ebiten.Image, index int) {
+	// Center button
+	centerX := (float64(WindowWidth) - ButtonWidth) / 2
+
+	r.Btn = NewButton(centerX, float64(index)*MenuPlayBtnY, ButtonWidth, ButtonHeight, r.Id)
+	r.Btn.Draw(screen)
 }
 
 // Draw the waiting menu to the screen.

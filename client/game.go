@@ -14,7 +14,7 @@ const (
 	// States of the application
 	sInit = iota
 	sMainMenu
-	//sPlayMenu
+	sPlayMenu
 	sWaitingGame
 	sGamePlaying
 	sGameWin
@@ -23,14 +23,14 @@ const (
 
 	// Network configuration
 	serverAddress = "ws://localhost:8080/ws" // goonker.saikoon.ch
-	roomId        = "87DY68"
-	isBotGame     = true
+	//roomId        = "87DY68"
+	isBotGame = true
 )
 
 type Game struct {
 	menu        *ui.MainMenu
-	waitingMenu *ui.WaitingMenu
 	playMenu    *ui.PlayMenu
+	waitingMenu *ui.WaitingMenu
 	state       int
 	netClient   *NetworkClient
 	grid        *ui.Grid
@@ -73,24 +73,39 @@ func (g *Game) Update() error {
 		g.Init()
 	case sMainMenu:
 		if g.menu.BtnPlay.IsClicked() {
-			// TODO: This block will be placed in PlayMenu later
 			// Try to connect to server (Async)
 			// Note: For WASM/Localhost testing use ws://localhost:8080/ws?room=87DY68
 			g.state = sWaitingGame
 			go func() {
-				err := g.netClient.Connect(serverAddress, roomId, isBotGame) // 172.20.10.2
+				err := g.netClient.Connect(serverAddress) // 172.20.10.2
 				if err != nil {
 					g.state = sMainMenu
 					log.Println("Connection failed:", err)
+				} else {
+					g.state = sPlayMenu
+					g.playMenu = &ui.PlayMenu{}
 				}
 			}()
-			// TODO: g.state = sPlayMenu
 		}
 		if g.menu.BtnQuit.IsClicked() {
 			return ebiten.Termination
 		}
-	//case sPlayMenu:
-	//TODO: Handle Play Menu interactions
+	case sPlayMenu:
+		for i, room := range g.playMenu.Rooms {
+			if room.Btn.IsClicked() {
+				g.state = sWaitingGame
+				go func() {
+					err := g.netClient.JoinGame(room.Id, isBotGame)
+					g.playMenu.RoomIndex = i
+					if err != nil {
+						g.state = sMainMenu
+						log.Println("Connection failed:", err)
+					}
+				}()
+				break
+			}
+		}
+		// TODO
 	case sWaitingGame:
 		g.waitingMenu.RotationAngle += 0.08
 
@@ -132,8 +147,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		ui.RenderMenu(screen, g.menu)
 	case sWaitingGame:
 		ui.RenderWaitingGame(screen, g.waitingMenu)
-	//case sPlayMenu:
-	//TODO: ui.RenderPlayMenu(...)
+	case sPlayMenu:
+		ui.RenderPlayMenu(screen, g.playMenu)
 	case sGamePlaying:
 		ui.RenderGame(screen, g.grid, g.isMyTurn)
 	case sGameWin:
@@ -163,6 +178,19 @@ func (g *Game) handleNetwork() {
 		}
 
 		switch packet.Type {
+		case common.MsgRooms:
+			var p common.RoomsPayload
+			if err := json.Unmarshal(packet.Data, &p); err != nil {
+				log.Printf("Failed to unmarshal %s: %v", packet.Type, err)
+				continue
+			}
+
+			for roomId, playerCount := range p.Rooms {
+				log.Printf("%d %s", playerCount, roomId)
+				room := &ui.Room{Id: roomId, PlayerCount: playerCount}
+				g.playMenu.Rooms = append(g.playMenu.Rooms, *room)
+			}
+
 		case common.MsgGameStart:
 			var p common.GameStartPayload
 			if err := json.Unmarshal(packet.Data, &p); err != nil {

@@ -64,5 +64,5 @@ type GameOverPayload struct {
 
 // RoomsPayload is sent by server to notify available rooms.
 type RoomsPayload struct {
-	Rooms map[string]*string `json:"rooms"`
+	Rooms map[string]int `json:"rooms"`
 }
