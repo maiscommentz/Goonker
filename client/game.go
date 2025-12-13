@@ -1,8 +1,10 @@
 package main
 
 import (
+	"Goonker/client/audio"
 	"Goonker/client/ui"
 	"Goonker/common"
+
 	"encoding/json"
 	"log"
 	"math"
@@ -28,12 +30,13 @@ const (
 )
 
 type Game struct {
-	menu        *ui.MainMenu
-	playMenu    *ui.PlayMenu
-	waitingMenu *ui.WaitingMenu
-	state       int
-	netClient   *NetworkClient
-	grid        *ui.Grid
+	menu         *ui.MainMenu
+	playMenu     *ui.PlayMenu
+	waitingMenu  *ui.WaitingMenu
+	state        int
+	netClient    *NetworkClient
+	grid         *ui.Grid
+	audioManager *audio.AudioManager
 
 	mySymbol common.PlayerID // 1 for X, 2 for O
 	isMyTurn bool
@@ -47,15 +50,18 @@ func (g *Game) Init() {
 	// Initialize the UI
 	ui.Init()
 
-	// Initialize the main menu
-	g.menu = ui.NewMainMenu()
+	// Initialize UI elements
+	g.initUIElements()
 
-	g.waitingMenu = &ui.WaitingMenu{}
+	// Initialize Audio Manager and sounds
+	g.initAudio()
 
-	// Initialize the grid
-	g.grid = &ui.Grid{
-		Col: ui.GridCol,
+	// Play main menu music
+	err := g.audioManager.LoadMusic("main_menu_music", "client/assets/main_menu.mp3")
+	if err != nil {
+		log.Println("Could not load music:", err)
 	}
+	g.audioManager.Play("main_menu_music")
 
 	// Set initial state
 	g.state = sMainMenu
@@ -73,21 +79,20 @@ func (g *Game) Update() error {
 		g.Init()
 	case sMainMenu:
 		if g.menu.BtnPlay.IsClicked() {
+			g.audioManager.Play("click_button")
 			// Try to connect to server (Async)
 			// Note: For WASM/Localhost testing use ws://localhost:8080/ws?room=87DY68
-			g.state = sWaitingGame
 			go func() {
 				err := g.netClient.Connect(serverAddress) // 172.20.10.2
 				if err != nil {
-					g.state = sMainMenu
 					log.Println("Connection failed:", err)
 				} else {
 					g.state = sPlayMenu
-					g.playMenu = &ui.PlayMenu{}
 				}
 			}()
 		}
 		if g.menu.BtnQuit.IsClicked() {
+			g.audioManager.Play("click_button")
 			return ebiten.Termination
 		}
 	case sPlayMenu:
@@ -105,12 +110,22 @@ func (g *Game) Update() error {
 				break
 			}
 		}
+		g.state = sWaitingGame
 		// TODO
 	case sWaitingGame:
 		g.waitingMenu.RotationAngle += 0.08
 
 		if g.waitingMenu.RotationAngle > math.Pi*2 {
 			g.waitingMenu.RotationAngle -= math.Pi * 2
+		}
+		if g.audioManager.IsPlaying("main_menu_music") {
+			g.audioManager.Stop("main_menu_music")
+
+			err := g.audioManager.LoadMusic("waiting_opponent_music", "client/assets/waiting_opponent.mp3")
+			if err != nil {
+				log.Println("Could not load music:", err)
+			}
+			g.audioManager.Play("waiting_opponent_music")
 		}
 	case sGamePlaying:
 		if !g.isMyTurn {
@@ -232,4 +247,19 @@ func (g *Game) handleNetwork() {
 			}
 		}
 	}
+}
+
+// Initialize UI elements like menus, grid, etc.
+func (g *Game) initUIElements() {
+	g.menu = ui.NewMainMenu()
+	g.playMenu = &ui.PlayMenu{}
+	g.waitingMenu = &ui.WaitingMenu{}
+	g.grid = &ui.Grid{
+		Col: ui.GridCol,
+	}
+}
+
+func (g *Game) initAudio() {
+	g.audioManager = audio.NewAudioManager()
+	g.audioManager.LoadSound("click_button", "client/assets/click_button.wav")
 }

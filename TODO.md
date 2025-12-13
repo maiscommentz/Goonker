@@ -22,4 +22,4 @@
 [ ] Refactor code for better readability and maintainability, make it "elegant".
 
 [ ] Improve UI/UX of the client game.
-[ ] Add sound effects and music to the client game.
+[x] Add sound effects and music to the client game.
