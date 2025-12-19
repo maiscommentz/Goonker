@@ -42,7 +42,7 @@ var (
 	WinMenuImage     *ebiten.Image
 	LoseMenuImage    *ebiten.Image
 	DrawMenuImage    *ebiten.Image
-	PlayMenuImage    *ebiten.Image
+	RoomsMenuImage   *ebiten.Image
 )
 
 // Initializes the images.
@@ -57,7 +57,7 @@ func InitImages() {
 	DrawWinMenu(WindowWidth, WindowHeight)
 	DrawLoseMenu(WindowWidth, WindowHeight)
 	DrawDrawMenu(WindowWidth, WindowHeight)
-	DrawPlayMenu(WindowWidth, WindowHeight)
+	DrawRoomsMenu(WindowWidth, WindowHeight)
 }
 
 // Draw the image for the grid.
@@ -180,7 +180,7 @@ func DrawMainMenu(width, height int, title string) {
 }
 
 // Draw the image for the waiting menu.
-func DrawPlayMenu(width, height int) {
+func DrawRoomsMenu(width, height int) {
 	dc := gg.NewContext(width, height)
 
 	dc.SetHexColor(gridBackgroundColor)
@@ -194,7 +194,7 @@ func DrawPlayMenu(width, height int) {
 	dc.SetHexColor(gridBorderColor)
 	dc.DrawStringAnchored("Choose a room", float64(width/2), float64(height)/TitleYRatio, 0.5, 0.5)
 
-	PlayMenuImage = ebiten.NewImageFromImage(dc.Image())
+	RoomsMenuImage = ebiten.NewImageFromImage(dc.Image())
 }
 
 // Draw the image for the waiting menu.

@@ -16,7 +16,7 @@ const (
 	// States of the application
 	sInit = iota
 	sMainMenu
-	sPlayMenu
+	sRoomsMenu
 	sWaitingGame
 	sGamePlaying
 	sGameWin
@@ -31,7 +31,7 @@ const (
 
 type Game struct {
 	menu         *ui.MainMenu
-	playMenu     *ui.PlayMenu
+	roomsMenu    *ui.RoomsMenu
 	waitingMenu  *ui.WaitingMenu
 	state        int
 	netClient    *NetworkClient
@@ -87,7 +87,7 @@ func (g *Game) Update() error {
 				if err != nil {
 					log.Println("Connection failed:", err)
 				} else {
-					g.state = sPlayMenu
+					g.state = sRoomsMenu
 				}
 			}()
 		}
@@ -95,13 +95,13 @@ func (g *Game) Update() error {
 			g.audioManager.Play("click_button")
 			return ebiten.Termination
 		}
-	case sPlayMenu:
-		for i, room := range g.playMenu.Rooms {
+	case sRoomsMenu:
+		for i, room := range g.roomsMenu.Rooms {
 			if room.Btn.IsClicked() {
 				g.state = sWaitingGame
 				go func() {
 					err := g.netClient.JoinGame(room.Id, isBotGame)
-					g.playMenu.RoomIndex = i
+					g.roomsMenu.RoomIndex = i
 					if err != nil {
 						g.state = sMainMenu
 						log.Println("Connection failed:", err)
@@ -162,8 +162,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		ui.RenderMenu(screen, g.menu)
 	case sWaitingGame:
 		ui.RenderWaitingGame(screen, g.waitingMenu)
-	case sPlayMenu:
-		ui.RenderPlayMenu(screen, g.playMenu)
+	case sRoomsMenu:
+		ui.RenderRoomsMenu(screen, g.roomsMenu)
 	case sGamePlaying:
 		ui.RenderGame(screen, g.grid, g.isMyTurn)
 	case sGameWin:
@@ -203,7 +203,7 @@ func (g *Game) handleNetwork() {
 			for roomId, playerCount := range p.Rooms {
 				log.Printf("%d %s", playerCount, roomId)
 				room := &ui.Room{Id: roomId, PlayerCount: playerCount}
-				g.playMenu.Rooms = append(g.playMenu.Rooms, *room)
+				g.roomsMenu.Rooms = append(g.roomsMenu.Rooms, *room)
 			}
 
 		case common.MsgGameStart:
@@ -252,13 +252,14 @@ func (g *Game) handleNetwork() {
 // Initialize UI elements like menus, grid, etc.
 func (g *Game) initUIElements() {
 	g.menu = ui.NewMainMenu()
-	g.playMenu = &ui.PlayMenu{}
+	g.roomsMenu = &ui.RoomsMenu{}
 	g.waitingMenu = &ui.WaitingMenu{}
 	g.grid = &ui.Grid{
 		Col: ui.GridCol,
 	}
 }
 
+// Initialize audio manager and load sounds
 func (g *Game) initAudio() {
 	g.audioManager = audio.NewAudioManager()
 	err := g.audioManager.LoadSound("click_button", "click_button.wav")

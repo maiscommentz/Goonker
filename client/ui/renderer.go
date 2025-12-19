@@ -58,9 +58,9 @@ func RenderMenu(screen *ebiten.Image, menu *MainMenu) {
 	menu.Draw(screen)
 }
 
-// Render the play menu.
-func RenderPlayMenu(screen *ebiten.Image, menu *PlayMenu) {
-	screen.DrawImage(PlayMenuImage, nil)
+// Render the rooms menu.
+func RenderRoomsMenu(screen *ebiten.Image, menu *RoomsMenu) {
+	screen.DrawImage(RoomsMenuImage, nil)
 	menu.Draw(screen)
 }
 
