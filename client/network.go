@@ -75,12 +75,15 @@ func (c *NetworkClient) GetRooms() error {
 	return nil
 }
 
+// Join a game and wait for the server to authorize us to start
 func (c *NetworkClient) JoinGame(roomID string, isBot bool) error {
+	// Build the join payload
 	joinPayload := common.JoinPayload{
 		RoomID: roomID,
 		IsBot:  isBot,
 	}
 
+	// Marshal the payload
 	data, err := json.Marshal(joinPayload)
 	if err != nil {
 		c.conn.Close(websocket.StatusInternalError, "failed to marshal join payload")
@@ -91,12 +94,32 @@ func (c *NetworkClient) JoinGame(roomID string, isBot bool) error {
 		Data: data,
 	}
 
-	if err := wsjson.Write(c.ctx, c.conn, packet); err != nil {
-		c.conn.Close(websocket.StatusInternalError, "failed to send join")
-		return err
+	c.SendPacket(packet)
+
+	return err
+}
+
+func (c *NetworkClient) PlaceSymbol(cellX, cellY int) error {
+	// Build the click payload
+	payload := common.ClickPayload{
+		X: cellX,
+		Y: cellY,
 	}
 
-	return nil
+	// Marshal the payload
+	data, err := json.Marshal(payload)
+	if err != nil {
+		c.conn.Close(websocket.StatusInternalError, "failed to marshal click payload")
+		return err
+	}
+	packet := common.Packet{
+		Type: common.MsgClick,
+		Data: data,
+	}
+
+	c.SendPacket(packet)
+
+	return err
 }
 
 func (c *NetworkClient) listen() {

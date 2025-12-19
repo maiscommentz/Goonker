@@ -53,49 +53,80 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Enforce timeout for handshake phase
-	ctx, cancel := context.WithTimeout(r.Context(), HandshakeTimeout)
-	defer cancel()
+	// Context for the connection lifecycle while in the lobby/handshake phase
+	// We use the request context which is cancelled when the connection closes
+	ctx := r.Context()
 
-	// Read the first packet sent by the client
-	var packet common.Packet
-	if err := wsjson.Read(ctx, c, &packet); err != nil {
-		log.Printf("Connection closed before join: %v", err)
-		c.Close(websocket.StatusPolicyViolation, ErrExpectedJoin)
-		return
-	}
+	for {
+		// Read a packet
+		var packet common.Packet
+		if err := wsjson.Read(ctx, c, &packet); err != nil {
+			log.Printf("Connection closed or error reading packet: %v", err)
+			return
+		}
 
-	// Validate that the first packet is a Join request
-	if packet.Type != common.MsgJoin {
-		log.Printf("First packet was not join: %s", packet.Type)
-		c.Close(websocket.StatusPolicyViolation, ErrFirstMustBeJoin)
-		return
-	}
+		switch packet.Type {
+		case common.MsgJoin:
+			// Parse the Join payload
+			var joinData common.JoinPayload
+			if err := json.Unmarshal(packet.Data, &joinData); err != nil {
+				log.Printf("Invalid join payload: %v", err)
+				c.Close(websocket.StatusProtocolError, ErrInvalidPayload)
+				return
+			}
 
-	// Parse the Join payload
-	var joinData common.JoinPayload
-	if err := json.Unmarshal(packet.Data, &joinData); err != nil {
-		log.Printf("Invalid join payload: %v", err)
-		c.Close(websocket.StatusProtocolError, ErrInvalidPayload)
-		return
-	}
+			// Validate RoomID presence
+			if joinData.RoomID == "" {
+				c.Close(websocket.StatusPolicyViolation, ErrRoomIDRequired)
+				return
+			}
 
-	// Validate RoomID presence
-	if joinData.RoomID == "" {
-		c.Close(websocket.StatusPolicyViolation, ErrRoomIDRequired)
-		return
-	}
+			// Let the Hub assign the player to a new or existing room
+			room := hub.GlobalHub.CreateRoom(joinData.RoomID, joinData.IsBot)
+			log.Printf("Client joining room '%s' (Bot: %v)", joinData.RoomID, joinData.IsBot)
+			pid := room.AddPlayer(c)
 
-	// Let the Hub assign the player to a new or existing room
-	room := hub.GlobalHub.CreateRoom(joinData.RoomID, joinData.IsBot)
-	log.Printf("Client joining room '%s' (Bot: %v)", joinData.RoomID, joinData.IsBot)
-	pid := room.AddPlayer(c)
+			// Validation of assigned PlayerID, otherwise room is full
+			if pid == common.Empty {
+				log.Println("Room is full, rejecting client")
+				c.Close(websocket.StatusPolicyViolation, ErrRoomFull)
+			} else {
+				log.Printf("Player assigned ID: %d in room %s", pid, joinData.RoomID)
+			}
 
-	// Validation of assigned PlayerID, otherwise room is full
-	if pid == common.Empty {
-		log.Println("Room is full, rejecting client")
-		c.Close(websocket.StatusPolicyViolation, ErrRoomFull)
-	} else {
-		log.Printf("Player assigned ID: %d in room %s", pid, joinData.RoomID)
+			// Once joined, the Room takes over the connection (reading/writing)
+			// so we must exit this handler loop to avoid concurrent reading.
+			return
+
+		case common.MsgGetRooms:
+			// Fetch available rooms from the Hub
+			rooms := hub.GlobalHub.GetAvailableRooms()
+
+			// Send the list back to the client
+			payload := common.RoomsPayload{Rooms: rooms}
+			data, err := json.Marshal(payload)
+			if err != nil {
+				log.Printf("Error marshaling rooms payload: %v", err)
+				continue
+			}
+
+			response := common.Packet{
+				Type: common.MsgRooms,
+				Data: data,
+			}
+
+			// Use a timeout for writing
+			writeCtx, cancel := context.WithTimeout(ctx, HandshakeTimeout)
+			defer cancel()
+
+			if err := wsjson.Write(writeCtx, c, response); err != nil {
+				log.Printf("Error sending MsgRooms: %v", err)
+				return
+			}
+
+		default:
+			// State machine is permissive in 'lobby', ignore unexpected messages
+			log.Printf("Unexpected message type: %s", packet.Type)
+		}
 	}
 }

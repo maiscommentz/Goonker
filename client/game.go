@@ -25,8 +25,7 @@ const (
 
 	// Network configuration
 	serverAddress = "ws://localhost:8080/ws" // goonker.saikoon.ch
-	//roomId        = "87DY68"
-	isBotGame = true
+	isBotGame     = true
 )
 
 type Game struct {
@@ -98,20 +97,15 @@ func (g *Game) Update() error {
 	case sRoomsMenu:
 		for i, room := range g.roomsMenu.Rooms {
 			if room.Btn.IsClicked() {
+				err := g.netClient.JoinGame(room.Id, isBotGame)
+				g.roomsMenu.RoomIndex = i // TODO: Remove this if not needed
+				if err != nil {
+					log.Println("Connection failed:", err)
+				}
 				g.state = sWaitingGame
-				go func() {
-					err := g.netClient.JoinGame(room.Id, isBotGame)
-					g.roomsMenu.RoomIndex = i
-					if err != nil {
-						g.state = sMainMenu
-						log.Println("Connection failed:", err)
-					}
-				}()
 				break
 			}
 		}
-		g.state = sWaitingGame
-		// TODO
 	case sWaitingGame:
 		g.waitingMenu.RotationAngle += 0.08
 
@@ -137,19 +131,7 @@ func (g *Game) Update() error {
 			return nil
 		}
 
-		err := g.netClient.SendPacket(common.Packet{
-			Type: common.MsgClick,
-			Data: func() json.RawMessage {
-				payload, _ := json.Marshal(common.ClickPayload{
-					X: cellX,
-					Y: cellY,
-				})
-				return payload
-			}(),
-		})
-		if err != nil {
-			log.Println("Failed to send move:", err)
-		}
+		g.netClient.PlaceSymbol(cellX, cellY)
 	}
 	return nil
 }
@@ -252,7 +234,7 @@ func (g *Game) handleNetwork() {
 // Initialize UI elements like menus, grid, etc.
 func (g *Game) initUIElements() {
 	g.menu = ui.NewMainMenu()
-	g.roomsMenu = &ui.RoomsMenu{}
+	g.roomsMenu = ui.NewRoomsMenu()
 	g.waitingMenu = &ui.WaitingMenu{}
 	g.grid = &ui.Grid{
 		Col: ui.GridCol,
