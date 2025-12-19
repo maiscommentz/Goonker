@@ -57,7 +57,7 @@ func (g *Game) Init() {
 	g.initAudio()
 
 	// Play main menu music
-	err := g.audioManager.LoadMusic("main_menu_music", "client/assets/main_menu.mp3")
+	err := g.audioManager.LoadMusic("main_menu_music", "main_menu.mp3")
 	if err != nil {
 		log.Println("Could not load music:", err)
 	}
@@ -121,7 +121,7 @@ func (g *Game) Update() error {
 		if g.audioManager.IsPlaying("main_menu_music") {
 			g.audioManager.Stop("main_menu_music")
 
-			err := g.audioManager.LoadMusic("waiting_opponent_music", "client/assets/waiting_opponent.mp3")
+			err := g.audioManager.LoadMusic("waiting_opponent_music", "waiting_opponent.mp3")
 			if err != nil {
 				log.Println("Could not load music:", err)
 			}
@@ -261,7 +261,7 @@ func (g *Game) initUIElements() {
 
 func (g *Game) initAudio() {
 	g.audioManager = audio.NewAudioManager()
-	err := g.audioManager.LoadSound("click_button", "client/assets/click_button.wav")
+	err := g.audioManager.LoadSound("click_button", "click_button.wav")
 	if err != nil {
 		log.Printf("Error loading sound: %v", err)
 	}
