@@ -4,6 +4,9 @@ import (
 	"Goonker/client/audio"
 	"Goonker/client/ui"
 	"Goonker/common"
+	"fmt"
+	"math/rand"
+	"time"
 
 	"encoding/json"
 	"log"
@@ -95,10 +98,40 @@ func (g *Game) Update() error {
 			return ebiten.Termination
 		}
 	case sRoomsMenu:
+		// Back to main menu
+		if g.roomsMenu.BtnBack.IsClicked() {
+			g.audioManager.Play("click_button")
+			g.netClient.Disconnect()
+			g.state = sMainMenu
+		}
+
+		// Join a bot game with a specialized ID
+		if g.roomsMenu.BtnPlayBot.IsClicked() {
+			g.audioManager.Play("click_button")
+			// Create a bot game with a specialized ID
+			err := g.netClient.JoinGame(fmt.Sprintf("BOT_%d_%d", time.Now().Unix(), rand.Intn(10000)), true)
+			if err != nil {
+				log.Println("Connection failed:", err)
+			}
+			g.state = sWaitingGame
+		}
+
+		// Create a room with a random ID.
+		if g.roomsMenu.BtnCreateRoom.IsClicked() {
+			g.audioManager.Play("click_button")
+			newRoomId := fmt.Sprintf("%d_%d", time.Now().Unix(), rand.Intn(10000))
+			err := g.netClient.JoinGame(newRoomId, false)
+			if err != nil {
+				log.Println("Connection failed:", err)
+			}
+			g.state = sWaitingGame
+		}
+
+		// Join an existing room
 		for i, room := range g.roomsMenu.Rooms {
 			if room.Btn.IsClicked() {
-				err := g.netClient.JoinGame(room.Id, isBotGame)
-				g.roomsMenu.RoomIndex = i // TODO: Remove this if not needed
+				err := g.netClient.JoinGame(room.Id, false)
+				g.roomsMenu.RoomIndex = i
 				if err != nil {
 					log.Println("Connection failed:", err)
 				}

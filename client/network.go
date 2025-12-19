@@ -61,6 +61,15 @@ func (c *NetworkClient) Connect(url string) error {
 	return nil
 }
 
+func (c *NetworkClient) Disconnect() {
+	c.sendMu.Lock()
+	if c.conn != nil {
+		c.conn.Close(websocket.StatusNormalClosure, "disconnecting")
+		c.conn = nil
+	}
+	c.sendMu.Unlock()
+}
+
 func (c *NetworkClient) GetRooms() error {
 	err := c.SendPacket(common.Packet{
 		Type: common.MsgGetRooms,

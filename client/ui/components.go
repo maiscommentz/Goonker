@@ -16,9 +16,13 @@ const (
 	ButtonCornerRadius = 10.0
 	ButtonTextYAnchor  = 0.35
 
-	// Button size
-	MenuPlayBtnY = 200.0
-	MenuQuitBtnY = 300.0
+	// Button positions
+	MainMenuPlayBtnY        = 200.0
+	MainMenuQuitBtnY        = 280.0
+	RoomsMenuBackBtnY       = 150.0
+	RoomsMenuPlayBotBtnY    = 230.0
+	RoomsMenuCreateRoomBtnY = 310.0
+	RoomsMenuBtnX           = 50.0
 
 	// Spinning wheel parameters
 	WheelTintRed   = 0.8
@@ -45,8 +49,11 @@ type WaitingMenu struct {
 }
 
 type RoomsMenu struct {
-	Rooms     []Room
-	RoomIndex int
+	Rooms         []Room
+	RoomIndex     int
+	BtnPlayBot    *Button
+	BtnCreateRoom *Button
+	BtnBack       *Button
 }
 
 type Room struct {
@@ -101,8 +108,8 @@ func NewMainMenu() *MainMenu {
 	centerX := (float64(WindowWidth) - ButtonWidth) / 2
 
 	// Create buttons
-	menu.BtnPlay = NewButton(centerX, MenuPlayBtnY, ButtonWidth, ButtonHeight, "Play")
-	menu.BtnQuit = NewButton(centerX, MenuQuitBtnY, ButtonWidth, ButtonHeight, "Quit")
+	menu.BtnPlay = NewButton(centerX, MainMenuPlayBtnY, ButtonWidth, ButtonHeight, "Play")
+	menu.BtnQuit = NewButton(centerX, MainMenuQuitBtnY, ButtonWidth, ButtonHeight, "Quit")
 
 	return menu
 }
@@ -110,6 +117,11 @@ func NewMainMenu() *MainMenu {
 // Constructor for the play menu.
 func NewRoomsMenu() *RoomsMenu {
 	menu := &RoomsMenu{}
+
+	// Create buttons
+	menu.BtnBack = NewButton(RoomsMenuBtnX, RoomsMenuBackBtnY, ButtonWidth, ButtonHeight, "Back")
+	menu.BtnPlayBot = NewButton(RoomsMenuBtnX, RoomsMenuPlayBotBtnY, ButtonWidth, ButtonHeight, "Against Bot")
+	menu.BtnCreateRoom = NewButton(RoomsMenuBtnX, RoomsMenuCreateRoomBtnY, ButtonWidth, ButtonHeight, "Create Room")
 
 	return menu
 }
@@ -128,22 +140,27 @@ func (m *MainMenu) Draw(screen *ebiten.Image) {
 	m.BtnQuit.Draw(screen)
 }
 
-// Draw the play menu to the screen.
+// Draw the rooms menu to the screen.
 func (m *RoomsMenu) Draw(screen *ebiten.Image) {
 	screen.DrawImage(RoomsMenuImage, nil)
+	m.BtnPlayBot.Draw(screen)
+	m.BtnCreateRoom.Draw(screen)
+	m.BtnBack.Draw(screen)
 
 	for i, room := range m.Rooms {
-		log.Printf("%d %+v", i, room)
 		room.Draw(screen, i)
 	}
 }
 
 // Draw the room at the specified index
 func (r *Room) Draw(screen *ebiten.Image, index int) {
-	// Center button
-	centerX := (float64(WindowWidth) - ButtonWidth) / 2
+	// List on the right side
+	// TODO: it doenst show for the moment
+	listX := float64(WindowWidth/2) + 50.0
+	startY := 150.0
+	gap := 70.0
 
-	r.Btn = NewButton(centerX, float64(index)*MenuPlayBtnY, ButtonWidth, ButtonHeight, r.Id)
+	r.Btn = NewButton(listX, startY+float64(index)*gap, ButtonWidth, ButtonHeight, r.Id)
 	r.Btn.Draw(screen)
 }
 
