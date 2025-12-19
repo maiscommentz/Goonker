@@ -44,7 +44,7 @@ type WaitingMenu struct {
 	RotationAngle float64
 }
 
-type PlayMenu struct {
+type RoomsMenu struct {
 	Rooms     []Room
 	RoomIndex int
 }
@@ -108,8 +108,8 @@ func NewMainMenu() *MainMenu {
 }
 
 // Constructor for the play menu.
-func NewPlayMenu() *PlayMenu {
-	menu := &PlayMenu{}
+func NewRoomsMenu() *RoomsMenu {
+	menu := &RoomsMenu{}
 
 	return menu
 }
@@ -129,8 +129,8 @@ func (m *MainMenu) Draw(screen *ebiten.Image) {
 }
 
 // Draw the play menu to the screen.
-func (m *PlayMenu) Draw(screen *ebiten.Image) {
-	screen.DrawImage(PlayMenuImage, nil)
+func (m *RoomsMenu) Draw(screen *ebiten.Image) {
+	screen.DrawImage(RoomsMenuImage, nil)
 
 	for i, room := range m.Rooms {
 		log.Printf("%d %+v", i, room)
