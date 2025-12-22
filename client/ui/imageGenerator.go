@@ -28,7 +28,8 @@ const (
 	WheelAlphaRange   = 205
 
 	// Menu
-	TitleYRatio = 5
+	TitleYRatio      = 5
+	TitleYRatioRooms = 6
 )
 
 var (
@@ -192,7 +193,7 @@ func DrawRoomsMenu(width, height int) {
 	}
 
 	dc.SetHexColor(gridBorderColor)
-	dc.DrawStringAnchored("Choose a room", float64(width/2), float64(height)/TitleYRatio, 0.5, 0.5)
+	dc.DrawStringAnchored("Choose a room", float64(width/2), float64(height)/TitleYRatioRooms, 0.5, 0.5)
 
 	RoomsMenuImage = ebiten.NewImageFromImage(dc.Image())
 }

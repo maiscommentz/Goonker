@@ -49,7 +49,7 @@ type WaitingMenu struct {
 }
 
 type RoomsMenu struct {
-	Rooms         []Room
+	Rooms         []*Room
 	RoomIndex     int
 	BtnPlayBot    *Button
 	BtnCreateRoom *Button
@@ -57,7 +57,7 @@ type RoomsMenu struct {
 }
 
 type Room struct {
-	Btn         *Button
+	JoinBtn     *Button
 	Id          string
 	PlayerCount int
 }
@@ -98,6 +98,16 @@ func NewButton(x, y, w, h float64, text string) *Button {
 	b.Image = ebiten.NewImageFromImage(dc.Image())
 
 	return b
+}
+
+// Constructor for the room.
+func NewRoom(id string, playerCount int) *Room {
+	room := &Room{
+		Id:          id,
+		PlayerCount: playerCount,
+	}
+
+	return room
 }
 
 // Constructor for the main menu.
@@ -160,8 +170,8 @@ func (r *Room) Draw(screen *ebiten.Image, index int) {
 	startY := 150.0
 	gap := 70.0
 
-	r.Btn = NewButton(listX, startY+float64(index)*gap, ButtonWidth, ButtonHeight, r.Id)
-	r.Btn.Draw(screen)
+	r.JoinBtn = NewButton(listX, startY+float64(index)*gap, ButtonWidth, ButtonHeight, r.Id)
+	r.JoinBtn.Draw(screen)
 }
 
 // Draw the waiting menu to the screen.

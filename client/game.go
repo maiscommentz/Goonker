@@ -90,6 +90,7 @@ func (g *Game) Update() error {
 					log.Println("Connection failed:", err)
 				} else {
 					g.state = sRoomsMenu
+					g.netClient.GetRooms()
 				}
 			}()
 		}
@@ -129,7 +130,7 @@ func (g *Game) Update() error {
 
 		// Join an existing room
 		for i, room := range g.roomsMenu.Rooms {
-			if room.Btn.IsClicked() {
+			if room.JoinBtn.IsClicked() {
 				err := g.netClient.JoinGame(room.Id, false)
 				g.roomsMenu.RoomIndex = i
 				if err != nil {
@@ -214,11 +215,15 @@ func (g *Game) handleNetwork() {
 				log.Printf("Failed to unmarshal %s: %v", packet.Type, err)
 				continue
 			}
+			// Clear existing rooms
+			g.roomsMenu.Rooms = nil
 
+			// Update rooms list
 			for roomId, playerCount := range p.Rooms {
 				log.Printf("%d %s", playerCount, roomId)
-				room := &ui.Room{Id: roomId, PlayerCount: playerCount}
-				g.roomsMenu.Rooms = append(g.roomsMenu.Rooms, *room)
+				// Initialize
+				room := ui.NewRoom(roomId, playerCount)
+				g.roomsMenu.Rooms = append(g.roomsMenu.Rooms, room)
 			}
 
 		case common.MsgGameStart:
