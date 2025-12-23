@@ -44,6 +44,7 @@ var (
 	LoseMenuImage    *ebiten.Image
 	DrawMenuImage    *ebiten.Image
 	RoomsMenuImage   *ebiten.Image
+	NoRoomsImage     *ebiten.Image
 )
 
 // Initializes the images.
@@ -59,6 +60,7 @@ func InitImages() {
 	DrawLoseMenu(WindowWidth, WindowHeight)
 	DrawDrawMenu(WindowWidth, WindowHeight)
 	DrawRoomsMenu(WindowWidth, WindowHeight)
+	DrawNoRoomsText()
 }
 
 // Draw the image for the grid.
@@ -214,6 +216,26 @@ func DrawWaitingMenu(width, height int) {
 	dc.DrawStringAnchored("Waiting for another player...", float64(width/2), float64(height)/TitleYRatio, 0.5, 0.5)
 
 	WaitingMenuImage = ebiten.NewImageFromImage(dc.Image())
+}
+
+// Draw the image for the no rooms text.
+func DrawNoRoomsText() {
+	width := WindowWidth / 2
+	height := TitleFontSize
+	dc := gg.NewContext(width, height)
+
+	dc.SetHexColor(gridBackgroundColor)
+	dc.Clear()
+
+	// Load the font
+	if err := dc.LoadFontFace("client/assets/font.ttf", SubtitleFontSize); err != nil {
+		log.Println("warning, couldn't load the font")
+	}
+
+	dc.SetHexColor(gridBorderColor)
+	dc.DrawStringAnchored("No rooms available :(", float64(width/2), float64(height)/2, 0.5, 0.5)
+
+	NoRoomsImage = ebiten.NewImageFromImage(dc.Image())
 }
 
 // Draw the image for the game menu.

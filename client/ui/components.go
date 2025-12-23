@@ -191,6 +191,15 @@ func (m *RoomsMenu) Draw(screen *ebiten.Image) {
 	for i, room := range m.Rooms {
 		room.Draw(screen, i)
 	}
+
+	if len(m.Rooms) == 0 {
+		listX := float64(RoomsMenuBtnX + ButtonWidth + RoomsMenuBtnX)
+		listY := float64(RoomsMenuBackBtnY)
+
+		op := &ebiten.DrawImageOptions{}
+		op.GeoM.Translate(listX, listY)
+		screen.DrawImage(NoRoomsImage, op)
+	}
 }
 
 // Draw the room at the specified index
