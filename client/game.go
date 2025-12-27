@@ -99,6 +99,8 @@ func (g *Game) Update() error {
 			return ebiten.Termination
 		}
 	case sRoomsMenu:
+		g.roomsMenu.RoomField.Update()
+
 		// Back to main menu
 		if g.roomsMenu.BtnBack.IsClicked() {
 			g.audioManager.Play("click_button")
