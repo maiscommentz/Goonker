@@ -26,6 +26,8 @@ const (
 	MsgClick     = "click"      // Client -> Server: "I clicked cell 4"
 	MsgUpdate    = "update"     // Server -> Client: "New board state"
 	MsgGameOver  = "game_over"  // Server -> Client: "Game over, result is X"
+	MsgChallenge = "challenge"  // Server -> Client: "Complete this challenge"
+	MsgAnswer    = "answer"     // Client -> Server: "Answer to the challenge"
 )
 
 // Packet is the generic message structure for communication.
@@ -65,4 +67,15 @@ type GameOverPayload struct {
 // RoomsPayload is sent by server to notify available rooms.
 type RoomsPayload struct {
 	Rooms []string `json:"rooms"`
+}
+
+// ChallengePayload is sent by the server to give the challenge informations
+type ChallengePayload struct {
+	Question string   `json:"question"`
+	Answers  []string `json:"answers"`
+}
+
+// AnswerPayload is sent by the client as a response to the challenge
+type AnswerPayload struct {
+	Answer int `json:"answer"`
 }

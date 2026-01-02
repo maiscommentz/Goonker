@@ -25,6 +25,7 @@ const (
 
 	// Positions
 	PlayerTurnTextYPos = 150
+	ChallengeQuestionY = 50
 
 	// Assets
 	FontPath = "font.ttf"
@@ -130,6 +131,25 @@ func RenderGame(screen *ebiten.Image, grid *Grid, myTurn bool) {
 
 		text.Draw(screen, msg, GameFont, op)
 	}
+}
+
+// Render challenge screen.
+func RenderChallenge(screen *ebiten.Image, challenge *ChallengeMenu) {
+	screen.DrawImage(GameMenuImage, nil)
+
+	// Question
+	op := &text.DrawOptions{}
+	w, _ := text.Measure(challenge.Question, GameFont, op.LineSpacing)
+	x := float64((WindowWidth - w) / 2)
+	op.GeoM.Translate(x, ChallengeQuestionY)
+	op.ColorScale.ScaleWithColor(color.Black)
+	text.Draw(screen, challenge.Question, GameFont, op)
+
+	// Answers buttons
+	for _, ansBtn := range challenge.Answers {
+		ansBtn.Draw(screen)
+	}
+
 }
 
 // Render win screen.

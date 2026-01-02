@@ -36,6 +36,10 @@ type Room struct {
 
 	mutex     sync.Mutex
 	IsBotGame bool
+
+	// Challenge
+	challengedMove     common.ClickPayload
+	challengeAnswerKey int
 }
 
 // NewRoom creates a new Room instance.
@@ -129,10 +133,29 @@ func (r *Room) listenPlayer(pid common.PlayerID, conn *websocket.Conn) {
 		case common.MsgClick:
 			var payload common.ClickPayload
 			if err := json.Unmarshal(packet.Data, &payload); err == nil {
-				r.handleMove(pid, payload.X, payload.Y)
+				if r.Logic.ShouldTriggerChallenge(pid, payload.X, payload.Y) {
+					r.challengedMove = payload
+					r.startChallenge(conn)
+				} else {
+					r.handleMove(pid, payload.X, payload.Y)
+				}
 			}
 		case common.MsgGetRooms:
 			r.sendRooms(conn)
+		case common.MsgAnswer:
+			var payload common.AnswerPayload
+			if err := json.Unmarshal(packet.Data, &payload); err == nil {
+				if payload.Answer == r.challengeAnswerKey {
+					log.Println("Challenge completed successfully")
+					r.Logic.DeleteMove(r.challengedMove.X, r.challengedMove.Y)
+					// Play the move
+					r.handleMove(pid, r.challengedMove.X, r.challengedMove.Y)
+				} else {
+					// Play the move, but no challenge this time
+					r.handleMove(pid, r.challengedMove.X, r.challengedMove.Y)
+					log.Println("Challenge failed")
+				}
+			}
 		default:
 			log.Printf("Room %s: Unknown message type: %s", r.ID, packet.Type)
 		}
@@ -148,7 +171,21 @@ func (r *Room) sendRooms(conn *websocket.Conn) {
 	r.sendJson(conn, common.MsgRooms, payload)
 }
 
-// handleMove coordinates game logic updates and notifications.
+func (r *Room) startChallenge(conn *websocket.Conn) {
+	log.Println("Start challenge")
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	// TODO : get random challenge, hardcoded for now
+	r.challengeAnswerKey = 0 // TODO : depends on the choosen challenge
+	var answers []string
+	answers = append(answers, "Russia")
+	answers = append(answers, "China")
+	answers = append(answers, "USA")
+	payload := common.ChallengePayload{Question: "What's the biggest country in the world ?", Answers: answers}
+	r.sendJson(conn, common.MsgChallenge, payload)
+}
+
+// handleMove coordinates game logic updates and notifications. Returns true if a challenge must start.
 func (r *Room) handleMove(pid common.PlayerID, x, y int) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
@@ -157,7 +194,6 @@ func (r *Room) handleMove(pid common.PlayerID, x, y int) {
 	err := r.Logic.ApplyMove(pid, x, y)
 	if err != nil {
 		log.Printf("Invalid move from %d: %v", pid, err)
-		return
 	}
 
 	// Send the updated board state to all players
@@ -166,7 +202,6 @@ func (r *Room) handleMove(pid common.PlayerID, x, y int) {
 	// Check if game is over, broadcast the result
 	if r.Logic.GameOver {
 		r.broadcastGameOver()
-		return
 	}
 
 	// If it's a Bot Game and the game is not over, the bot plays.

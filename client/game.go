@@ -22,6 +22,7 @@ const (
 	sRoomsMenu
 	sWaitingGame
 	sGamePlaying
+	sChallenge
 	sGameWin
 	sGameLose
 	sGameDraw
@@ -32,13 +33,14 @@ const (
 )
 
 type Game struct {
-	menu         *ui.MainMenu
-	roomsMenu    *ui.RoomsMenu
-	waitingMenu  *ui.WaitingMenu
-	state        int
-	netClient    *NetworkClient
-	grid         *ui.Grid
-	audioManager *audio.AudioManager
+	menu          *ui.MainMenu
+	roomsMenu     *ui.RoomsMenu
+	waitingMenu   *ui.WaitingMenu
+	challengeMenu *ui.ChallengeMenu
+	state         int
+	netClient     *NetworkClient
+	grid          *ui.Grid
+	audioManager  *audio.AudioManager
 
 	mySymbol common.PlayerID // 1 for X, 2 for O
 	isMyTurn bool
@@ -195,6 +197,17 @@ func (g *Game) Update() error {
 		}
 
 		g.netClient.PlaceSymbol(cellX, cellY)
+	case sChallenge:
+		for i, ansBtn := range g.challengeMenu.Answers {
+			if ansBtn.IsClicked() {
+				g.audioManager.Play("click_button")
+				err := g.netClient.AnswerChallenge(i)
+				if err != nil {
+					log.Println("Connection failed:", err)
+				}
+				g.state = sGamePlaying
+			}
+		}
 	}
 	return nil
 }
@@ -211,6 +224,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		ui.RenderRoomsMenu(screen, g.roomsMenu)
 	case sGamePlaying:
 		ui.RenderGame(screen, g.grid, g.isMyTurn)
+	case sChallenge:
+		ui.RenderChallenge(screen, g.challengeMenu)
 	case sGameWin:
 		ui.RenderWin(screen)
 	case sGameLose:
@@ -277,6 +292,16 @@ func (g *Game) handleNetwork() {
 			g.isMyTurn = (p.Turn == g.mySymbol)
 			log.Println("Board updated")
 
+		case common.MsgChallenge:
+			var payload common.ChallengePayload
+			if err := json.Unmarshal(packet.Data, &payload); err != nil {
+				log.Printf("Failed to unmarshal %s: %v", packet.Type, err)
+				continue
+			}
+
+			// g.challenge = payload
+			g.challengeMenu = ui.NewChallengeMenu(payload)
+			g.state = sChallenge
 		case common.MsgGameOver:
 			var p common.GameOverPayload
 			if err := json.Unmarshal(packet.Data, &p); err != nil {

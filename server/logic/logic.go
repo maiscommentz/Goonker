@@ -45,7 +45,11 @@ func NewGameLogic() *GameLogic {
 	}
 }
 
-// ApplyMove attempts to play a move. Returns an error if invalid.
+func (g *GameLogic) ShouldTriggerChallenge(player common.PlayerID, x, y int) bool {
+	return g.Board[x][y] != player && g.Board[x][y] != common.Empty
+}
+
+// ApplyMove attempts to play a move. Returns an error if invalid. Or true if a minigame must start
 func (g *GameLogic) ApplyMove(player common.PlayerID, x, y int) error {
 	// Validate move
 	if g.GameOver {
@@ -57,13 +61,15 @@ func (g *GameLogic) ApplyMove(player common.PlayerID, x, y int) error {
 	if x < 0 || x > common.BoardSize-1 || y < 0 || y > common.BoardSize-1 {
 		return ErrOutOfBounds
 	}
-	if g.Board[x][y] != common.Empty {
+	if g.Board[x][y] == player {
 		return ErrCellOccupied
 	}
 
-	// Apply state change
-	g.Board[x][y] = player
-	g.Moves++
+	if g.Board[x][y] == common.Empty {
+		// Apply state change
+		g.Board[x][y] = player
+		g.Moves++
+	}
 
 	// Check for win or draw
 	if g.checkWin(player) {
@@ -81,6 +87,10 @@ func (g *GameLogic) ApplyMove(player common.PlayerID, x, y int) error {
 	}
 
 	return nil
+}
+
+func (g *GameLogic) DeleteMove(x, y int) {
+	g.Board[x][y] = common.Empty
 }
 
 // checkWin scans rows, columns, and diagonals for a complete line.

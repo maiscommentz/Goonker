@@ -131,6 +131,27 @@ func (c *NetworkClient) PlaceSymbol(cellX, cellY int) error {
 	return err
 }
 
+func (c *NetworkClient) AnswerChallenge(answerKey int) error {
+	payload := common.AnswerPayload{
+		Answer: answerKey,
+	}
+
+	// Marshal the payload
+	data, err := json.Marshal(payload)
+	if err != nil {
+		c.conn.Close(websocket.StatusInternalError, "failed to marshal answer payload")
+		return err
+	}
+	packet := common.Packet{
+		Type: common.MsgAnswer,
+		Data: data,
+	}
+
+	c.SendPacket(packet)
+
+	return err
+}
+
 func (c *NetworkClient) listen() {
 	defer func() {
 		// Lock, Close, and set c.conn to nil so we can reconnect later
