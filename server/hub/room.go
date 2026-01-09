@@ -196,7 +196,7 @@ func (r *Room) startChallenge(conn *websocket.Conn) {
 	r.challengeAnswerKey = challenge.AnswerKey
 	r.sendJson(conn, common.MsgChallenge, payload)
 
-	r.challengeTimer = time.AfterFunc(common.ChallengeTime*time.Second, func() {
+	r.challengeTimer = time.AfterFunc(common.ChallengeTime*time.Second+2, func() {
 		r.handleChallengeTimeout()
 	})
 }

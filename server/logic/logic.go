@@ -31,11 +31,11 @@ var (
 
 // GameLogic manages the state of a Tic-Tac-Toe game
 type GameLogic struct {
-	Board    [common.BoardSize][common.BoardSize]common.PlayerID
-	Turn     common.PlayerID
-	Winner   common.PlayerID
-	GameOver bool
-	Moves    int
+	Board       [common.BoardSize][common.BoardSize]common.PlayerID
+	Turn        common.PlayerID
+	Winner      common.PlayerID
+	GameOver    bool
+	SymbolCount int
 }
 
 // NewGameLogic initializes a new game state.
@@ -66,16 +66,16 @@ func (g *GameLogic) ApplyMove(player common.PlayerID, x, y int) error {
 	}
 
 	if g.Board[x][y] == common.Empty {
-		// Apply state change
+		// Place the player symbol
 		g.Board[x][y] = player
-		g.Moves++
+		g.SymbolCount++
 	}
 
 	// Check for win or draw
 	if g.checkWin(player) {
 		g.Winner = player
 		g.GameOver = true
-	} else if g.Moves >= MaxMoves {
+	} else if g.SymbolCount >= MaxMoves {
 		g.GameOver = true // Draw
 	} else {
 		// Toggle turn
@@ -91,6 +91,7 @@ func (g *GameLogic) ApplyMove(player common.PlayerID, x, y int) error {
 
 func (g *GameLogic) DeleteMove(x, y int) {
 	g.Board[x][y] = common.Empty
+	g.SymbolCount--
 }
 
 // checkWin scans rows, columns, and diagonals for a complete line.
