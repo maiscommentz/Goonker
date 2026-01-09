@@ -28,7 +28,7 @@ const (
 	sGameDraw
 
 	// Network configuration
-	serverAddress = "ws://localhost:8080/ws" // goonker.saikoon.ch
+	serverAddress = "wss://goonker.saikoon.ch/ws" // goonker.saikoon.ch
 	isBotGame     = true
 )
 
@@ -92,7 +92,10 @@ func (g *Game) Update() error {
 					log.Println("Connection failed:", err)
 				} else {
 					g.state = sRoomsMenu
-					g.netClient.GetRooms()
+					err := g.netClient.GetRooms()
+					if err != nil {
+						log.Println("Could not get rooms : ", err)
+					}
 				}
 			}()
 		}
@@ -196,7 +199,10 @@ func (g *Game) Update() error {
 			return nil
 		}
 		g.audioManager.Play("place_symbol")
-		g.netClient.PlaceSymbol(cellX, cellY)
+		err := g.netClient.PlaceSymbol(cellX, cellY)
+		if err != nil {
+			log.Println(err)
+		}
 	case sChallenge:
 		g.challengeMenu.Clock.Update()
 		for i, ansBtn := range g.challengeMenu.Answers {
@@ -323,15 +329,16 @@ func (g *Game) handleNetwork() {
 				continue
 			}
 
-			if p.Winner == g.mySymbol {
+			switch p.Winner {
+			case g.mySymbol:
 				g.state = sGameWin
 				g.audioManager.Play("win")
 				log.Println("You Win!")
-			} else if p.Winner == common.Empty {
+			case common.Empty:
 				g.state = sGameDraw
 				g.audioManager.Play("lose")
 				log.Println("It's a Draw!")
-			} else {
+			default:
 				g.state = sGameLose
 				g.audioManager.Play("lose")
 				log.Println("You Lose!")
