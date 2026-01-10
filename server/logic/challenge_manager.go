@@ -10,30 +10,35 @@ import (
 	"github.com/bits-and-blooms/bitset"
 )
 
+// ChallengeManager handles the challenges
 type ChallengeManager struct {
 	challenges      []Challenge
 	askedChallenges bitset.BitSet
 }
 
+// Challenge represents a challenge
 type Challenge struct {
 	Question  string   `json:"question"`
 	Answers   []string `json:"answers"`
 	AnswerKey int      `json:"answer_key"`
 }
 
-// LoadChallenges from a json file
+// NewChallengeManager creates a new challenge manager
 func NewChallengeManager() *ChallengeManager {
+	// Load challenges from json file
 	challengesByte, err := assets.AssetsFS.ReadFile("challenges.json")
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	// Initialize challenge manager
 	challengeManager := &ChallengeManager{}
 
 	if err := json.Unmarshal(challengesByte, &challengeManager.challenges); err != nil {
 		log.Fatal(err)
 	}
 
+	// Initialize asked challenges
 	challengeManager.askedChallenges = *bitset.New(uint(len(challengeManager.challenges)))
 
 	return challengeManager

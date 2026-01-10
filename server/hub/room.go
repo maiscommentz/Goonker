@@ -183,28 +183,34 @@ func (r *Room) sendRooms(conn *websocket.Conn) {
 	r.sendJson(conn, common.MsgRooms, payload)
 }
 
+// startChallenge starts a challenge for the player.
 func (r *Room) startChallenge(conn *websocket.Conn) {
 	log.Println("Start challenge")
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
+	// Pick a challenge
 	challenge, err := r.challengeManager.PickChallenge()
 	if err != nil {
 		log.Fatal(err)
 		return
 	}
 
+	// Shuffle the answers
 	challenge.Shuffle()
 
+	// Send the challenge to the player
 	payload := common.ChallengePayload{Question: challenge.Question, Answers: challenge.Answers}
 	r.challengeAnswerKey = challenge.AnswerKey
 	r.sendJson(conn, common.MsgChallenge, payload)
 
+	// Start the challenge timer
 	r.challengeTimer = time.AfterFunc(common.ChallengeTime*time.Second+2, func() {
 		r.handleChallengeTimeout()
 	})
 }
 
+// handleChallengeTimeout handles the challenge timeout.
 func (r *Room) handleChallengeTimeout() {
 	log.Println("Challenge time ran out")
 	r.handleMove(r.challengedPlayer, r.challengedMove.X, r.challengedMove.Y)
@@ -249,6 +255,7 @@ func (r *Room) broadcastGameStart() {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
+	// Notify all players that the game is starting
 	for pid, p := range r.Players {
 		payload := common.GameStartPayload{
 			YouAre: pid,
@@ -273,6 +280,7 @@ func (r *Room) broadcastUpdate_Locked() {
 		Turn:  r.Logic.Turn,
 	}
 
+	// Send the update to all players
 	for _, p := range r.Players {
 		r.sendJson(p.Conn, common.MsgUpdate, payload)
 	}
@@ -285,10 +293,12 @@ func (r *Room) broadcastGameOver() {
 		Winner: r.Logic.Winner,
 	}
 
+	// Send the game over to all players
 	for _, p := range r.Players {
 		r.sendJson(p.Conn, common.MsgGameOver, payload)
 	}
 
+	// Remove the room
 	GlobalHub.RemoveRoom(r.ID)
 }
 

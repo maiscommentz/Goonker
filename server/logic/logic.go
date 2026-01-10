@@ -45,6 +45,7 @@ func NewGameLogic() *GameLogic {
 	}
 }
 
+// ShouldTriggerChallenge checks if a challenge should be triggered
 func (g *GameLogic) ShouldTriggerChallenge(player common.PlayerID, x, y int) bool {
 	return g.Board[x][y] != player && g.Board[x][y] != common.Empty
 }
