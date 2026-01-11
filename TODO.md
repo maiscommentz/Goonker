@@ -16,7 +16,7 @@
 
 [x] Add error handling and logging in client network operations.
 [x] Add comments and documentation for complex functions in server and client code.
-[ ] Implement unit tests for critical functions in server and client code.
+[x] Implement unit tests for critical functions in server and client code.
 [x] Review security aspects of WebSocket communication.
 [x] Create GitHub Actions workflow for client CI/CD.
 [x] Refactor code for better readability and maintainability, make it "elegant".
