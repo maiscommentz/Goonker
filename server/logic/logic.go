@@ -19,24 +19,23 @@ const (
 	SymbolEmpty = "."
 	SeparatorV  = " | "
 	SeparatorH  = "---------"
-
 )
 
 // Error messages
 var (
-	ErrGameOver      = errors.New("game is over")
-	ErrNotYourTurn   = errors.New("not your turn")
-	ErrOutOfBounds   = errors.New("out of bounds")
-	ErrCellOccupied  = errors.New("cell already occupied")
+	ErrGameOver     = errors.New("game is over")
+	ErrNotYourTurn  = errors.New("not your turn")
+	ErrOutOfBounds  = errors.New("out of bounds")
+	ErrCellOccupied = errors.New("cell already occupied")
 )
 
 // GameLogic manages the state of a Tic-Tac-Toe game
 type GameLogic struct {
-	Board [common.BoardSize][common.BoardSize]common.PlayerID
-	Turn  common.PlayerID
-	Winner common.PlayerID
-	GameOver bool
-	Moves int
+	Board       [common.BoardSize][common.BoardSize]common.PlayerID
+	Turn        common.PlayerID
+	Winner      common.PlayerID
+	GameOver    bool
+	SymbolCount int
 }
 
 // NewGameLogic initializes a new game state.
@@ -46,7 +45,12 @@ func NewGameLogic() *GameLogic {
 	}
 }
 
-// ApplyMove attempts to play a move. Returns an error if invalid.
+// ShouldTriggerChallenge checks if a challenge should be triggered
+func (g *GameLogic) ShouldTriggerChallenge(player common.PlayerID, x, y int) bool {
+	return g.Board[x][y] != player && g.Board[x][y] != common.Empty
+}
+
+// ApplyMove attempts to play a move. Returns an error if invalid. Or true if a minigame must start
 func (g *GameLogic) ApplyMove(player common.PlayerID, x, y int) error {
 	// Validate move
 	if g.GameOver {
@@ -58,19 +62,21 @@ func (g *GameLogic) ApplyMove(player common.PlayerID, x, y int) error {
 	if x < 0 || x > common.BoardSize-1 || y < 0 || y > common.BoardSize-1 {
 		return ErrOutOfBounds
 	}
-	if g.Board[x][y] != common.Empty {
+	if g.Board[x][y] == player {
 		return ErrCellOccupied
 	}
 
-	// Apply state change
-	g.Board[x][y] = player
-	g.Moves++
+	if g.Board[x][y] == common.Empty {
+		// Place the player symbol
+		g.Board[x][y] = player
+		g.SymbolCount++
+	}
 
 	// Check for win or draw
 	if g.checkWin(player) {
 		g.Winner = player
 		g.GameOver = true
-	} else if g.Moves >= MaxMoves {
+	} else if g.SymbolCount >= MaxMoves {
 		g.GameOver = true // Draw
 	} else {
 		// Toggle turn
@@ -84,15 +90,21 @@ func (g *GameLogic) ApplyMove(player common.PlayerID, x, y int) error {
 	return nil
 }
 
+// DeleteMove empties the given board cell
+func (g *GameLogic) DeleteMove(x, y int) {
+	g.Board[x][y] = common.Empty
+	g.SymbolCount--
+}
+
 // checkWin scans rows, columns, and diagonals for a complete line.
 func (g *GameLogic) checkWin(p common.PlayerID) bool {
 	board := g.Board
 	boardSize := common.BoardSize
 
 	// Check Rows and Columns
-	for i := 0; i < boardSize; i++ {
+	for i := range boardSize {
 		rowWin, colWin := true, true
-		for j := 0; j < boardSize; j++ {
+		for j := range boardSize {
 			// Check Column i (varying rows j)
 			if board[i][j] != p {
 				colWin = false
@@ -109,7 +121,7 @@ func (g *GameLogic) checkWin(p common.PlayerID) bool {
 
 	// Check Diagonals
 	diag1, diag2 := true, true
-	for i := 0; i < boardSize; i++ {
+	for i := range boardSize {
 		// Top-left to bottom-right (0,0 -> 1,1 -> 2,2)
 		if board[i][i] != p {
 			diag1 = false
@@ -125,9 +137,9 @@ func (g *GameLogic) checkWin(p common.PlayerID) bool {
 
 // PrintConsoleBoard renders the board state to the console for debugging.
 func (g *GameLogic) PrintConsoleBoard() {
-	for y := 0; y < common.BoardSize; y++ {
+	for y := range common.BoardSize {
 		var line []string
-		for x := 0; x < common.BoardSize; x++ {
+		for x := range common.BoardSize {
 			cell := g.Board[x][y]
 			switch cell {
 			case common.P1:
@@ -139,7 +151,7 @@ func (g *GameLogic) PrintConsoleBoard() {
 			}
 		}
 		fmt.Println(strings.Join(line, SeparatorV))
-		
+
 		// Print horizontal separator only between rows
 		if y < common.BoardSize-1 {
 			fmt.Println(SeparatorH)

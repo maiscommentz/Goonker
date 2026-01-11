@@ -31,7 +31,7 @@ func NewNetworkClient() *NetworkClient {
 }
 
 // Connect dials the server (ws://localhost:8080/ws for local dev)
-func (c *NetworkClient) Connect(url string, roomID string, isBot bool) error {
+func (c *NetworkClient) Connect(url string) error {
 	// Thread-safe check if already connected
 	c.sendMu.Lock()
 	if c.conn != nil {
@@ -54,26 +54,6 @@ func (c *NetworkClient) Connect(url string, roomID string, isBot bool) error {
 	c.ctx, c.ctxCancel = context.WithCancel(context.Background())
 	c.sendMu.Unlock()
 
-	joinPayload := common.JoinPayload{
-		RoomID: roomID,
-		IsBot:  isBot,
-	}
-
-	data, err := json.Marshal(joinPayload)
-	if err != nil {
-		c.conn.Close(websocket.StatusInternalError, "failed to marshal join payload")
-		return err
-	}
-	packet := common.Packet{
-		Type: common.MsgJoin,
-		Data: data,
-	}
-
-	if err := wsjson.Write(ctx, c.conn, packet); err != nil {
-		c.conn.Close(websocket.StatusInternalError, "failed to send join")
-		return err
-	}
-
 	// Start listening immediately in a separate goroutine
 	go c.listen()
 
@@ -81,12 +61,145 @@ func (c *NetworkClient) Connect(url string, roomID string, isBot bool) error {
 	return nil
 }
 
+// Disconnect closes the connection to the server
+func (c *NetworkClient) Disconnect() {
+	c.sendMu.Lock()
+	if c.conn != nil {
+		// Close the connection
+		err := c.conn.Close(websocket.StatusNormalClosure, "disconnecting")
+		if err != nil {
+			log.Println(err)
+		}
+		c.conn = nil
+	}
+	c.sendMu.Unlock()
+}
+
+// IsConnected checks if the client is currently connected
+func (c *NetworkClient) IsConnected() bool {
+	c.sendMu.Lock()
+	defer c.sendMu.Unlock()
+	return c.conn != nil
+}
+
+// GetRooms requests the list of available rooms from the server
+func (c *NetworkClient) GetRooms() error {
+	// Send the get rooms packet
+	err := c.SendPacket(common.Packet{
+		Type: common.MsgGetRooms,
+		Data: nil,
+	})
+
+	// If there was an error, return it
+	if err != nil {
+		log.Println("Failed to send get rooms:", err)
+		return err
+	}
+
+	return nil
+}
+
+// Join a game and wait for the server to authorize us to start
+func (c *NetworkClient) JoinGame(roomID string, isBot bool) error {
+	// Build the join payload
+	joinPayload := common.JoinPayload{
+		RoomID: roomID,
+		IsBot:  isBot,
+	}
+
+	// Marshal the payload
+	data, err := json.Marshal(joinPayload)
+	if err != nil {
+		err = c.conn.Close(websocket.StatusInternalError, "failed to marshal join payload")
+		return err
+	}
+	packet := common.Packet{
+		Type: common.MsgJoin,
+		Data: data,
+	}
+
+	// Send the packet
+	err = c.SendPacket(packet)
+
+	// If there was an error, return it
+	if err != nil {
+		log.Println("Failed to send join:", err)
+		return err
+	}
+
+	return nil
+}
+
+// PlaceSymbol places a symbol on the board
+func (c *NetworkClient) PlaceSymbol(cellX, cellY int) error {
+	// Build the click payload
+	payload := common.ClickPayload{
+		X: cellX,
+		Y: cellY,
+	}
+
+	// Marshal the payload
+	data, err := json.Marshal(payload)
+	if err != nil {
+		err = c.conn.Close(websocket.StatusInternalError, "failed to marshal click payload")
+		return err
+	}
+	packet := common.Packet{
+		Type: common.MsgClick,
+		Data: data,
+	}
+
+	// Send the packet
+	err = c.SendPacket(packet)
+
+	// If there was an error, return it
+	if err != nil {
+		log.Println("Failed to send click:", err)
+		return err
+	}
+
+	return nil
+}
+
+// AnswerChallenge answers a challenge
+func (c *NetworkClient) AnswerChallenge(answerKey int) error {
+	payload := common.AnswerPayload{
+		Answer: answerKey,
+	}
+
+	// Marshal the payload
+	data, err := json.Marshal(payload)
+	if err != nil {
+		err = c.conn.Close(websocket.StatusInternalError, "failed to marshal answer payload")
+		return err
+	}
+	packet := common.Packet{
+		Type: common.MsgAnswer,
+		Data: data,
+	}
+
+	// Send the packet
+	err = c.SendPacket(packet)
+
+	// If there was an error, return it
+	if err != nil {
+		log.Println("Failed to send answer:", err)
+		return err
+	}
+
+	return nil
+}
+
+// listen listens for incoming packets
 func (c *NetworkClient) listen() {
 	defer func() {
 		// Lock, Close, and set c.conn to nil so we can reconnect later
 		c.sendMu.Lock()
 		if c.conn != nil {
-			c.conn.Close(websocket.StatusInternalError, "connection closed")
+			err := c.conn.Close(websocket.StatusInternalError, "connection closed")
+			if err != nil {
+				log.Println(err)
+			}
 			c.conn = nil // Important: Reset so Connect() works again
 		}
 		c.sendMu.Unlock()

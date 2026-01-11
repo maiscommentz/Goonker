@@ -3,7 +3,9 @@ package hub
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -36,16 +38,29 @@ type Room struct {
 
 	mutex     sync.Mutex
 	IsBotGame bool
+
+	// Challenge
+	challengeManager   logic.ChallengeManager
+	challengedMove     common.ClickPayload
+	challengeAnswerKey int
+	challengedPlayer   common.PlayerID
+	challengeTimer     *time.Timer
 }
 
 // NewRoom creates a new Room instance.
-func NewRoom(id string, isBot bool) *Room {
-	return &Room{
-		ID:        id,
-		Players:   make(map[common.PlayerID]*Player),
-		Logic:     logic.NewGameLogic(),
-		IsBotGame: isBot,
+func NewRoom(id string, isBot bool) (*Room, error) {
+	cm, err := logic.NewChallengeManager()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create challenge manager: %w", err)
 	}
+
+	return &Room{
+		ID:               id,
+		Players:          make(map[common.PlayerID]*Player),
+		Logic:            logic.NewGameLogic(),
+		IsBotGame:        isBot,
+		challengeManager: *cm,
+	}, nil
 }
 
 // AddPlayer assigns an ID (P1/P2) to the connecting player and starts listening.
@@ -105,7 +120,10 @@ func (r *Room) listenPlayer(pid common.PlayerID, conn *websocket.Conn) {
 		delete(r.Players, pid)
 		r.mutex.Unlock()
 
-		conn.Close(websocket.StatusNormalClosure, CloseMessage)
+		err := conn.Close(websocket.StatusNormalClosure, CloseMessage)
+		if err != nil && !strings.Contains(err.Error(), "already wrote close") {
+			log.Println(err)
+		}
 
 		// Auto-remove room if empty
 		if len(r.Players) == 0 {
@@ -125,16 +143,87 @@ func (r *Room) listenPlayer(pid common.PlayerID, conn *websocket.Conn) {
 		}
 
 		// Handle Click messages
-		if packet.Type == common.MsgClick {
+		switch packet.Type {
+		case common.MsgClick:
 			var payload common.ClickPayload
 			if err := json.Unmarshal(packet.Data, &payload); err == nil {
-				r.handleMove(pid, payload.X, payload.Y)
+				if r.Logic.ShouldTriggerChallenge(pid, payload.X, payload.Y) {
+					r.challengedMove = payload
+					r.challengedPlayer = pid
+					r.startChallenge(conn)
+				} else {
+					r.handleMove(pid, payload.X, payload.Y)
+				}
 			}
+		case common.MsgGetRooms:
+			r.sendRooms(conn)
+		case common.MsgAnswer:
+			var payload common.AnswerPayload
+			if err := json.Unmarshal(packet.Data, &payload); err == nil {
+				if r.challengeTimer != nil {
+					r.challengeTimer.Stop()
+				}
+				if payload.Answer == r.challengeAnswerKey {
+					log.Println("Challenge completed successfully")
+					r.Logic.DeleteMove(r.challengedMove.X, r.challengedMove.Y)
+					// Play the move
+					r.handleMove(pid, r.challengedMove.X, r.challengedMove.Y)
+				} else {
+					// Play the move, but no challenge this time
+					r.handleMove(pid, r.challengedMove.X, r.challengedMove.Y)
+					log.Println("Challenge failed")
+				}
+			}
+		default:
+			log.Printf("Room %s: Unknown message type: %s", r.ID, packet.Type)
 		}
 	}
 }
 
-// handleMove coordinates game logic updates and notifications.
+// sendRooms sends the available rooms to the client.
+func (r *Room) sendRooms(conn *websocket.Conn) {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	rooms := GlobalHub.GetAvailableRooms()
+	payload := common.RoomsPayload{Rooms: rooms}
+	r.sendJson(conn, common.MsgRooms, payload)
+}
+
+// startChallenge starts a challenge for the player.
+func (r *Room) startChallenge(conn *websocket.Conn) {
+	log.Println("Start challenge")
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
+	// Pick a challenge
+	// Pick a challenge
+	challenge, err := r.challengeManager.PickChallenge()
+	if err != nil {
+		log.Printf("Failed to pick challenge: %v", err)
+		return
+	}
+
+	// Shuffle the answers
+	challenge.Shuffle()
+
+	// Send the challenge to the player
+	payload := common.ChallengePayload{Question: challenge.Question, Answers: challenge.Answers}
+	r.challengeAnswerKey = challenge.AnswerKey
+	r.sendJson(conn, common.MsgChallenge, payload)
+
+	// Start the challenge timer
+	r.challengeTimer = time.AfterFunc(common.ChallengeTime*time.Second+2, func() {
+		r.handleChallengeTimeout()
+	})
+}
+
+// handleChallengeTimeout handles the challenge timeout.
+func (r *Room) handleChallengeTimeout() {
+	log.Println("Challenge time ran out")
+	r.handleMove(r.challengedPlayer, r.challengedMove.X, r.challengedMove.Y)
+}
+
+// handleMove coordinates game logic updates and notifications. Returns true if a challenge must start.
 func (r *Room) handleMove(pid common.PlayerID, x, y int) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
@@ -143,7 +232,6 @@ func (r *Room) handleMove(pid common.PlayerID, x, y int) {
 	err := r.Logic.ApplyMove(pid, x, y)
 	if err != nil {
 		log.Printf("Invalid move from %d: %v", pid, err)
-		return
 	}
 
 	// Send the updated board state to all players
@@ -152,7 +240,6 @@ func (r *Room) handleMove(pid common.PlayerID, x, y int) {
 	// Check if game is over, broadcast the result
 	if r.Logic.GameOver {
 		r.broadcastGameOver()
-		return
 	}
 
 	// If it's a Bot Game and the game is not over, the bot plays.
@@ -170,13 +257,12 @@ func (r *Room) handleMove(pid common.PlayerID, x, y int) {
 	}
 }
 
-// Broadcasting helper functions
-
 // broadcastGameStart notifies all players that the game is starting.
 func (r *Room) broadcastGameStart() {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
+	// Notify all players that the game is starting
 	for pid, p := range r.Players {
 		payload := common.GameStartPayload{
 			YouAre: pid,
@@ -201,6 +287,7 @@ func (r *Room) broadcastUpdate_Locked() {
 		Turn:  r.Logic.Turn,
 	}
 
+	// Send the update to all players
 	for _, p := range r.Players {
 		r.sendJson(p.Conn, common.MsgUpdate, payload)
 	}
@@ -213,9 +300,13 @@ func (r *Room) broadcastGameOver() {
 		Winner: r.Logic.Winner,
 	}
 
+	// Send the game over to all players
 	for _, p := range r.Players {
 		r.sendJson(p.Conn, common.MsgGameOver, payload)
 	}
+
+	// Remove the room
+	GlobalHub.RemoveRoom(r.ID)
 }
 
 // sendJson helps to reduce boilerplate and enforce timeouts

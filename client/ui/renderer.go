@@ -1,11 +1,12 @@
 package ui
 
 import (
+	"Goonker/client/assets"
 	"Goonker/common"
 	"bytes"
 	"image/color"
+	"io/fs"
 	"log"
-	"os"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
@@ -24,18 +25,26 @@ const (
 
 	// Positions
 	PlayerTurnTextYPos = 150
+	ChallengeQuestionY = 50
+
+	// Assets
+	FontPath = "font.ttf"
 )
 
 var (
+	// gameFaceSource is the source of the font face
 	gameFaceSource *text.GoTextFaceSource
-	GameFont       *text.GoTextFace
+	// SmallGameFont is the small font face
+	SmallGameFont *text.GoTextFace
+	// BigGameFont is the big font face
+	BigGameFont *text.GoTextFace
 )
 
 // Init rendering components, like the images, the fonts...
 func Init() {
 	InitImages()
 
-	fontData, err := os.ReadFile("client/assets/font.ttf")
+	fontData, err := fs.ReadFile(assets.AssetsFS, FontPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -46,18 +55,29 @@ func Init() {
 	}
 	gameFaceSource = src
 
-	GameFont = &text.GoTextFace{
+	SmallGameFont = &text.GoTextFace{
 		Source: gameFaceSource,
 		Size:   TextFontSize,
 	}
+
+	SmallGameFont = &text.GoTextFace{
+		Source: gameFaceSource,
+		Size:   SubtitleFontSize,
+	}
+
+	TimerInit()
 }
 
 // Render the main menu.
 func RenderMenu(screen *ebiten.Image, menu *MainMenu) {
 	screen.DrawImage(MainMenuImage, nil)
 	menu.Draw(screen)
-	menu.BtnPlay.Draw(screen)
-	menu.BtnQuit.Draw(screen)
+}
+
+// Render the rooms menu.
+func RenderRoomsMenu(screen *ebiten.Image, menu *RoomsMenu) {
+	screen.DrawImage(RoomsMenuImage, nil)
+	menu.Draw(screen)
 }
 
 // Render the waiting game menu.
@@ -112,7 +132,7 @@ func RenderGame(screen *ebiten.Image, grid *Grid, myTurn bool) {
 
 		op := &text.DrawOptions{}
 
-		w, _ := text.Measure(msg, GameFont, op.LineSpacing)
+		w, _ := text.Measure(msg, SmallGameFont, op.LineSpacing)
 
 		x := (float64((WindowWidth)/2) - (gridSize / 2) - w) / 2
 
@@ -120,21 +140,46 @@ func RenderGame(screen *ebiten.Image, grid *Grid, myTurn bool) {
 
 		op.ColorScale.ScaleWithColor(color.Black)
 
-		text.Draw(screen, msg, GameFont, op)
+		text.Draw(screen, msg, SmallGameFont, op)
 	}
 }
 
+// Render challenge screen.
+func RenderChallenge(screen *ebiten.Image, challenge *ChallengeMenu) {
+	screen.DrawImage(GameMenuImage, nil)
+
+	// Question
+	op := &text.DrawOptions{}
+	w, _ := text.Measure(challenge.Question, SmallGameFont, op.LineSpacing)
+	x := float64((WindowWidth - w) / 2)
+	op.GeoM.Translate(x, ChallengeQuestionY)
+	op.ColorScale.ScaleWithColor(color.Black)
+	text.Draw(screen, challenge.Question, SmallGameFont, op)
+
+	// Timer
+	challenge.Clock.Draw(screen)
+
+	// Answers buttons
+	for _, ansBtn := range challenge.Answers {
+		ansBtn.Draw(screen)
+	}
+
+}
+
 // Render win screen.
-func RenderWin(screen *ebiten.Image) {
+func RenderWin(screen *ebiten.Image, menu *GameOverMenu) {
 	screen.DrawImage(WinMenuImage, nil)
+	menu.Draw(screen)
 }
 
 // Render lose screen.
-func RenderLose(screen *ebiten.Image) {
+func RenderLose(screen *ebiten.Image, menu *GameOverMenu) {
 	screen.DrawImage(LoseMenuImage, nil)
+	menu.Draw(screen)
 }
 
 // Render draw screen.
-func RenderDraw(screen *ebiten.Image) {
+func RenderDraw(screen *ebiten.Image, menu *GameOverMenu) {
 	screen.DrawImage(DrawMenuImage, nil)
+	menu.Draw(screen)
 }

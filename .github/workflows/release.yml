@@ -3,7 +3,7 @@ name: Release CI/CD
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
 
 permissions:
   contents: write
@@ -15,11 +15,16 @@ jobs:
     steps:
       - name: "[⚙️] Checkout repository"
         uses: actions/checkout@v4
-      
+
       - name: "[📦] Setup Go"
         uses: actions/setup-go@v5
         with:
           go-version: stable
+
+      - name: "[🛠️] Install Linux dependencies"
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libasound2-dev libgl1-mesa-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev libxxf86vm-dev
 
       - name: "[🏷️] Run GoReleaser"
         uses: goreleaser/goreleaser-action@v6
@@ -27,6 +32,6 @@ jobs:
           distribution: goreleaser
           version: latest
           args: release --clean
-          workdir: ./server
+          workdir: ./
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
