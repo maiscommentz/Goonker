@@ -63,13 +63,6 @@ func (g *Game) Init() {
 	// Initialize Audio Manager and load game sounds
 	g.initAudio()
 
-	// Play main menu music
-	err := g.audioManager.LoadMusic("main_menu_music", "main_menu.mp3")
-	if err != nil {
-		log.Println("Could not load music:", err)
-	}
-	g.audioManager.Play("main_menu_music")
-
 	// Set initial state to Main Menu
 	g.state = sMainMenu
 }
@@ -87,6 +80,11 @@ func (g *Game) Update() error {
 		g.Init()
 	case sMainMenu:
 		// Handle Main Menu interactions
+
+		// Play main menu music if not playing
+		if !g.audioManager.IsPlaying("main_menu_music") {
+			g.audioManager.Play("main_menu_music")
+		}
 
 		// Click on play
 		if g.menu.BtnPlay.IsClicked() {
@@ -112,6 +110,11 @@ func (g *Game) Update() error {
 		}
 	case sRoomsMenu:
 		// Handle Rooms Menu interactions
+
+		// Play main menu music if not playing
+		if !g.audioManager.IsPlaying("main_menu_music") {
+			g.audioManager.Play("main_menu_music")
+		}
 
 		// Update the room field for text input
 		g.roomsMenu.RoomField.Update()
@@ -188,6 +191,14 @@ func (g *Game) Update() error {
 	case sWaitingGame:
 		// Handle Waiting Screen animations and logic
 
+		// Play waiting music
+		if g.audioManager.IsPlaying("main_menu_music") {
+			g.audioManager.Stop("main_menu_music")
+		}
+		if !g.audioManager.IsPlaying("waiting_opponent_music") {
+			g.audioManager.Play("waiting_opponent_music")
+		}
+
 		// Update the animation wheel
 		g.waitingMenu.RotationAngle += 0.08
 
@@ -195,16 +206,6 @@ func (g *Game) Update() error {
 			g.waitingMenu.RotationAngle -= math.Pi * 2
 		}
 
-		// Play the waiting music if not already playing
-		if g.audioManager.IsPlaying("main_menu_music") {
-			g.audioManager.Stop("main_menu_music")
-
-			err := g.audioManager.LoadMusic("waiting_opponent_music", "waiting_opponent.mp3")
-			if err != nil {
-				log.Println("Could not load music:", err)
-			}
-			g.audioManager.Play("waiting_opponent_music")
-		}
 	case sGamePlaying:
 		// Handle Game Playing state
 
@@ -346,6 +347,14 @@ func (g *Game) handleNetwork() {
 			g.state = sGamePlaying // Server authorized us to start
 			log.Printf("Game Started! I am Player %d", g.mySymbol)
 
+			// Ensure game music is playing (handle case where waiting screen was skipped)
+			if g.audioManager.IsPlaying("main_menu_music") {
+				g.audioManager.Stop("main_menu_music")
+			}
+			if !g.audioManager.IsPlaying("waiting_opponent_music") {
+				g.audioManager.Play("waiting_opponent_music")
+			}
+
 		case common.MsgUpdate:
 			// Handle board update
 			// Ensure the game state is set to playing (recovers from network lag/missed packets)
@@ -394,27 +403,26 @@ func (g *Game) handleNetwork() {
 				continue
 			}
 
+			// Stop the music and play the game over sound
+			if g.audioManager.IsPlaying("waiting_opponent_music") {
+				g.audioManager.Stop("waiting_opponent_music")
+			}
+			if g.audioManager.IsPlaying("main_menu_music") {
+				g.audioManager.Stop("main_menu_music")
+			}
+
 			// Determine result and switch state/music
 			switch p.Winner {
 			case g.mySymbol:
 				g.state = sGameWin
-				if g.audioManager.IsPlaying("challenge") {
-					g.audioManager.Stop("challenge")
-				}
 				g.audioManager.Play("win")
 				log.Println("You Win!")
 			case common.Empty:
 				g.state = sGameDraw
-				if g.audioManager.IsPlaying("challenge") {
-					g.audioManager.Stop("challenge")
-				}
 				g.audioManager.Play("lose")
 				log.Println("It's a Draw!")
 			default:
 				g.state = sGameLose
-				if g.audioManager.IsPlaying("challenge") {
-					g.audioManager.Stop("challenge")
-				}
 				g.audioManager.Play("lose")
 				log.Println("You Lose!")
 			}
@@ -442,8 +450,20 @@ func (g *Game) initUIElements() {
 func (g *Game) initAudio() {
 	g.audioManager = audio.NewAudioManager()
 
+	// Load main menu music
+	err := g.audioManager.LoadMusic("main_menu_music", "main_menu.mp3")
+	if err != nil {
+		log.Println("Could not load music:", err)
+	}
+
+	// Load waiting opponent music
+	err = g.audioManager.LoadMusic("waiting_opponent_music", "waiting_opponent.mp3")
+	if err != nil {
+		log.Println("Could not load music:", err)
+	}
+
 	// Load sound effects
-	err := g.audioManager.LoadSound("click_button", "click_button.wav")
+	err = g.audioManager.LoadSound("click_button", "click_button.wav")
 	if err != nil {
 		log.Printf("Error loading sound: %v", err)
 	}
