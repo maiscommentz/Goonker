@@ -89,7 +89,12 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 			}
 
 			// Let the Hub assign the player to a new or existing room
-			room := hub.GlobalHub.CreateRoom(joinData.RoomID, joinData.IsBot)
+			room, err := hub.GlobalHub.CreateRoom(joinData.RoomID, joinData.IsBot)
+			if err != nil {
+				log.Printf("Failed to create room '%s': %v", joinData.RoomID, err)
+				_ = c.Close(websocket.StatusInternalError, "Failed to create room")
+				return
+			}
 			log.Printf("Client joining room '%s' (Bot: %v)", joinData.RoomID, joinData.IsBot)
 			pid := room.AddPlayer(c)
 

@@ -23,19 +23,22 @@ func (h *Hub) GetRoom(roomID string) *Room {
 }
 
 // CreateRoom creates a new room if it doesn't exist
-func (h *Hub) CreateRoom(roomID string, isBot bool) *Room {
+func (h *Hub) CreateRoom(roomID string, isBot bool) (*Room, error) {
 	h.mutex.Lock()
 	defer h.mutex.Unlock()
 
 	// If the room already exists, return it
 	if room, exists := h.rooms[roomID]; exists {
-		return room
+		return room, nil
 	}
 
 	// Create the room
-	newRoom := NewRoom(roomID, isBot)
+	newRoom, err := NewRoom(roomID, isBot)
+	if err != nil {
+		return nil, err
+	}
 	h.rooms[roomID] = newRoom
-	return newRoom
+	return newRoom, nil
 }
 
 // RemoveRoom deletes a room from the hub

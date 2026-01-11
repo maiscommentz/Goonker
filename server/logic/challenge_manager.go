@@ -4,7 +4,6 @@ import (
 	"Goonker/server/assets"
 	"encoding/json"
 	"fmt"
-	"log"
 	"math/rand"
 
 	"github.com/bits-and-blooms/bitset"
@@ -24,24 +23,24 @@ type Challenge struct {
 }
 
 // NewChallengeManager creates a new challenge manager
-func NewChallengeManager() *ChallengeManager {
+func NewChallengeManager() (*ChallengeManager, error) {
 	// Load challenges from json file
 	challengesByte, err := assets.AssetsFS.ReadFile("challenges.json")
 	if err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("failed to read challenges file: %w", err)
 	}
 
 	// Initialize challenge manager
 	challengeManager := &ChallengeManager{}
 
 	if err := json.Unmarshal(challengesByte, &challengeManager.challenges); err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("failed to unmarshal challenges: %w", err)
 	}
 
 	// Initialize asked challenges
 	challengeManager.askedChallenges = *bitset.New(uint(len(challengeManager.challenges)))
 
-	return challengeManager
+	return challengeManager, nil
 }
 
 // PickChallenge returns a challenge from the challenges list

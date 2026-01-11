@@ -74,6 +74,14 @@ func (g *Game) Update() error {
 	// Always poll the network for incoming messages first
 	g.handleNetwork()
 
+	// Check if we lost connection in a state that requires it
+	if g.state == sRoomsMenu || g.state == sWaitingGame || g.state == sGamePlaying || g.state == sChallenge {
+		if g.netClient == nil || !g.netClient.IsConnected() {
+			log.Println("Connection lost! Returning to Main Menu.")
+			g.state = sMainMenu
+		}
+	}
+
 	switch g.state {
 	case sInit:
 		// Initialize the game if in Init state

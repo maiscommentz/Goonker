@@ -3,6 +3,7 @@ package hub
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"strings"
 	"sync"
@@ -47,14 +48,19 @@ type Room struct {
 }
 
 // NewRoom creates a new Room instance.
-func NewRoom(id string, isBot bool) *Room {
+func NewRoom(id string, isBot bool) (*Room, error) {
+	cm, err := logic.NewChallengeManager()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create challenge manager: %w", err)
+	}
+
 	return &Room{
 		ID:               id,
 		Players:          make(map[common.PlayerID]*Player),
 		Logic:            logic.NewGameLogic(),
 		IsBotGame:        isBot,
-		challengeManager: *logic.NewChallengeManager(),
-	}
+		challengeManager: *cm,
+	}, nil
 }
 
 // AddPlayer assigns an ID (P1/P2) to the connecting player and starts listening.
@@ -190,9 +196,10 @@ func (r *Room) startChallenge(conn *websocket.Conn) {
 	defer r.mutex.Unlock()
 
 	// Pick a challenge
+	// Pick a challenge
 	challenge, err := r.challengeManager.PickChallenge()
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Failed to pick challenge: %v", err)
 		return
 	}
 

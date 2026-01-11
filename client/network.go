@@ -75,6 +75,13 @@ func (c *NetworkClient) Disconnect() {
 	c.sendMu.Unlock()
 }
 
+// IsConnected checks if the client is currently connected
+func (c *NetworkClient) IsConnected() bool {
+	c.sendMu.Lock()
+	defer c.sendMu.Unlock()
+	return c.conn != nil
+}
+
 // GetRooms requests the list of available rooms from the server
 func (c *NetworkClient) GetRooms() error {
 	// Send the get rooms packet

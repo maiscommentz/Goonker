@@ -50,7 +50,10 @@ func TestPickChallenge(t *testing.T) {
 		}
 	}()
 
-	cm := NewChallengeManager()
+	cm, err := NewChallengeManager()
+	if err != nil {
+		t.Fatalf("Failed to create ChallengeManager: %v", err)
+	}
 	if cm == nil {
 		t.Fatal("Expected ChallengeManager, got nil")
 	}
